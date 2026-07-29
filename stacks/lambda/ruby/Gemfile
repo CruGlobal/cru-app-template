@@ -1,6 +1,15 @@
 source "https://rubygems.org"
 
-# DataDog Lambda instrumentation. The gem brings in ddtrace; native extensions
-# are compiled in the Dockerfile (see the build deps installed before
-# `bundle install`).
-gem "datadog-lambda"
+# DataDog Lambda instrumentation.
+#
+# `datadog` MUST be declared here explicitly. datadog-lambda 3.x lists it as a
+# *development* dependency only, yet `require "datadog/lambda"` loads
+# `datadog/tracing/...` at boot — so without this line the handler dies with
+# "cannot load such file -- datadog/tracing/contrib/http/distributed/fetcher".
+# (datadog-lambda 2.x pulled in the old `ddtrace` gem for you; 3.x does not.)
+# The constraint matches datadog-lambda's own gemspec.
+#
+# Native extensions are compiled in the Dockerfile — see the build deps
+# installed before `bundle install`.
+gem "datadog-lambda", "~> 3.29"
+gem "datadog", "~> 2.30"

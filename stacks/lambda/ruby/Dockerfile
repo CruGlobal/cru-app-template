@@ -35,13 +35,15 @@ WORKDIR ${LAMBDA_TASK_ROOT}
 COPY --from=extension /opt/secrets-lambda-extension /opt/secrets-lambda-extension
 ENV AWS_LAMBDA_EXEC_WRAPPER=/opt/secrets-lambda-extension/secrets-wrapper
 
-# DataDog's ddtrace (pulled in by datadog-lambda) has native extensions that
-# must be compiled, so install the build toolchain before `bundle install`.
+# The `datadog` gem has native extensions that must be compiled, so install the
+# build toolchain before `bundle install`.
 RUN dnf install -y gcc gcc-c++ gmp-devel make && dnf clean all
 
-# Install gems (datadog-lambda + ddtrace). There's no Gemfile.lock in a fresh
-# template, so bundler resolves and writes one here. Once you commit a
-# Gemfile.lock, builds become reproducible — which is what build-once wants.
+# Install gems (datadog-lambda + datadog — see the Gemfile for why both). There's
+# no Gemfile.lock in a fresh template, so bundler resolves and writes one here.
+# Commit a Gemfile.lock as soon as you can: build-once wants a reproducible
+# image, and an unlocked resolve is how this stack's DataDog wiring rotted once
+# already.
 COPY Gemfile ./
 RUN bundle install --jobs 4 --retry 2
 
