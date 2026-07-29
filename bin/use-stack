@@ -281,11 +281,20 @@ esac
 # stack. Replace each with the facts of the stack we just activated, so the docs
 # stay true after activation instead of telling the reader to run this script
 # again.
+# The replacement text is passed as a FILE, not as `awk -v`: BSD awk (what
+# macOS ships, and most of this fleet develops on a Mac) rejects a newline in a
+# -v value, so a multi-line block has to be read with getline.
 fill_block() {
-  local file="$1" body="$2"
+  local file="$1" body_file="$2"
   [ -f "$file" ] || return 0
-  awk -v body="$body" '
-    /<!-- CRU:STACK -->/ { print; print body; skip = 1; next }
+  awk -v bf="$body_file" '
+    /<!-- CRU:STACK -->/ {
+      print
+      while ((getline line < bf) > 0) print line
+      close(bf)
+      skip = 1
+      next
+    }
     /<!-- \/CRU:STACK -->/ { skip = 0 }
     !skip { print }
   ' "$file" > "$file.use-stack.tmp"
@@ -309,8 +318,12 @@ else
   shape_line="It is a **handler invoked by an event** (API Gateway, SQS, an EventBridge schedule, …), not a web server — there is no \`\$PORT\` to bind and no health URL to curl. It returns \`{ statusCode: 200, body: '{\"status\":\"ok\"}' }\`. Keep the handler's signature and a fast, successful return — that's what Lambda invokes and deploys are judged by."
 fi
 
-readme_body="This app runs on **$type_label** (\`type: $type\`) and is written in
-**$lang**. Its entry point is \`$entry\`.
+blocks="$(mktemp -d)"
+trap 'rm -rf "$blocks"' EXIT
+
+cat > "$blocks/readme" <<EOF
+This app runs on **$type_label** (\`type: $type\`) and is written in **$lang**.
+Its entry point is \`$entry\`.
 
 $shape_line
 
@@ -318,9 +331,11 @@ $shape_line
 | ------- | ----------- |
 | \`$install_cmd\` | \`$run_cmd\` |
 
-\`./build.sh\` builds the container image exactly the way CI does."
+\`./build.sh\` builds the container image exactly the way CI does.
+EOF
 
-agents_body="**This repo's stack is already activated: $type / $lang.** It runs on
+cat > "$blocks/agents" <<EOF
+**This repo's stack is already activated: $type / $lang.** It runs on
 **$type_label** and is written in **$lang** — there is nothing to pick, and
 \`bin/use-stack\` is gone. Build on \`$entry\`.
 
@@ -330,19 +345,22 @@ Run it locally with \`$install_cmd\` then \`$run_cmd\`. \`./build.sh\` builds th
 container image exactly the way CI does.
 
 The image is built by \`.github/workflows/pipeline-v2.yml\`, which passes
-\`type: $type\` to CruGlobal/.github's \`build-candidate.yml\` — the one place
-the runtime type appears in this repo. Everything after the build resolves the
-type server-side from the app's CruApplicationInfo record."
+\`type: $type\` to CruGlobal/.github's \`build-candidate.yml\` — the one place the
+runtime type appears in this repo. Everything after the build (deploy, promote,
+rollback) resolves the type server-side from the app's CruApplicationInfo record.
+EOF
 
-quickstart_body="This app's stack is **$type / $lang** — it runs on **$type_label**
-and is written in **$lang**. It is provisioned with the
+cat > "$blocks/quickstart" <<EOF
+This app's stack is **$type / $lang** — it runs on **$type_label** and is written
+in **$lang**. It is provisioned with the
 [$tf_module](https://github.com/CruGlobal/cru-terraform-modules/blob/main/$tf_module/README.md)
-Terraform module."
+Terraform module.
+EOF
 
 echo "→ Filling in README.md, AGENTS.md and QUICK_START.md…"
-fill_block README.md "$readme_body"
-fill_block AGENTS.md "$agents_body"
-fill_block QUICK_START.md "$quickstart_body"
+fill_block README.md "$blocks/readme"
+fill_block AGENTS.md "$blocks/agents"
+fill_block QUICK_START.md "$blocks/quickstart"
 
 # --- 6. Remove the scaffolding ----------------------------------------------
 
