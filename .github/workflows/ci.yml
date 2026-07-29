@@ -1,0 +1,125 @@
+name: CI
+
+# TEMPLATE SELF-CHECK. bin/use-stack REPLACES this file with the activated
+# language's real CI (install → build → test) on first run, so what you see here
+# only ever runs in cru-app-template itself: it proves every (type, language)
+# combo still activates cleanly and that every stack builds.
+#
+# The job is named `lint-and-build` — the fleet-standard required-check name, the
+# same name bin/use-stack gives the app's CI job. Keep it that way in both
+# places: it is marked required in repos' branch rulesets (configured via
+# TerraBloks / cru-terraform), and renaming it blocks merges on a check that
+# never reports.
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  lint-and-build:
+    name: lint-and-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: stacks/server/nodejs/.tool-versions
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+
+      - name: Install check tooling
+        run: pip install --quiet pyyaml
+
+      - name: Shell syntax (bin/use-stack + every build.sh)
+        run: |
+          bash -n bin/use-stack
+          find stacks -name build.sh -print -exec bash -n {} \;
+
+      - name: YAML parses
+        run: |
+          python - <<'PY'
+          import glob, yaml
+          for f in sorted(glob.glob(".github/**/*.yml", recursive=True)):
+              yaml.safe_load(open(f))
+              print("ok", f)
+          PY
+
+      - name: Ruby syntax
+        run: find stacks -name '*.rb' -o -name '*.ru' | xargs -r -n1 ruby -c
+
+      - name: Python syntax
+        run: python -m compileall -q stacks/server/python stacks/lambda/python
+
+      - name: Node stacks install & build
+        run: |
+          set -e
+          for d in stacks/server/nodejs stacks/lambda/nodejs; do
+            echo "::group::$d"
+            (cd "$d" && npm ci && npm run build)
+            echo "::endgroup::"
+          done
+
+      # The real check: activate every combo in a throwaway copy and assert the
+      # script left the repo in the shape an app expects.
+      - name: Activate every (type, language) combo
+        run: |
+          fail=0
+          for type in ecs cloudrun lambda; do
+            for lang in nodejs ruby python; do
+              work="$RUNNER_TEMP/$type-$lang"
+              rm -rf "$work"; mkdir -p "$work"
+              git archive HEAD | tar -x -C "$work"
+
+              if ! (cd "$work" && bin/use-stack "$type" "$lang") > "$work.log" 2>&1; then
+                echo "::error::$type/$lang — bin/use-stack failed"
+                cat "$work.log"
+                fail=1
+                continue
+              fi
+
+              for f in Dockerfile build.sh .tool-versions \
+                       .github/workflows/pipeline-v2.yml \
+                       .github/workflows/ci.yml \
+                       .github/dependabot.yml; do
+                if [ ! -e "$work/$f" ]; then
+                  echo "::error::$type/$lang — missing $f"; fail=1
+                fi
+              done
+
+              if [ -d "$work/stacks" ]; then
+                echo "::error::$type/$lang — stacks/ survived activation"; fail=1
+              fi
+              if [ -e "$work/bin/use-stack" ]; then
+                echo "::error::$type/$lang — bin/use-stack survived activation"; fail=1
+              fi
+              if ! grep -q "type: $type" "$work/.github/workflows/pipeline-v2.yml"; then
+                echo "::error::$type/$lang — pipeline-v2.yml does not say 'type: $type'"; fail=1
+              fi
+              if grep -q 'CRU-TEMPLATE-GUARD' "$work/.github/workflows/pipeline-v2.yml"; then
+                echo "::error::$type/$lang — the template guard survived activation"; fail=1
+              fi
+              if grep -rq '__CRU_' "$work"; then
+                echo "::error::$type/$lang — unsubstituted __CRU_* placeholder"
+                grep -rn '__CRU_' "$work" || true
+                fail=1
+              fi
+              if ! python -c "import yaml,sys; [yaml.safe_load(open(f)) for f in sys.argv[1:]]" \
+                   "$work/.github/workflows/pipeline-v2.yml" \
+                   "$work/.github/workflows/ci.yml" \
+                   "$work/.github/dependabot.yml"; then
+                echo "::error::$type/$lang — generated YAML does not parse"; fail=1
+              fi
+
+              echo "✓ $type/$lang"
+            done
+          done
+          exit $fail

@@ -1,0 +1,19 @@
+{
+  "name": "cru-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A Cru application running on __CRU_TYPE_LABEL__.",
+  "engines": {
+    "node": ">= 24.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "node --watch src/index.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "typescript": "^5.9"
+  }
+}

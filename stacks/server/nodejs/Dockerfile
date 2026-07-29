@@ -1,0 +1,37 @@
+# NODE_VERSION set by build.sh from .tool-versions
+ARG NODE_VERSION=24
+FROM public.ecr.aws/docker/library/node:${NODE_VERSION}-alpine
+
+# DataDog logs source
+LABEL com.datadoghq.ad.logs='[{"source": "nodejs"}]'
+
+# Upgrade alpine packages (useful for security fixes)
+RUN apk upgrade --no-cache
+
+WORKDIR /app
+
+# Install dependencies first so this layer caches between code changes.
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Build the TypeScript app to dist/
+COPY . .
+RUN npm run build
+
+ENV NODE_ENV=production
+
+# NOTE: pipeline v2 is build-once — ONE env-agnostic image is promoted from
+# release-candidate to production, so nothing environment-specific may be baked
+# in. Read configuration from environment variables at runtime; Terraform and
+# the secrets injection supply them per environment.
+
+# The app listens on $PORT (default 8080); the platform routes traffic there.
+EXPOSE 8080
+CMD ["node", "dist/index.js"]
+
+# Build identity -> Datadog version (D10 bare suffix, e.g. 2026-07-24-10058).
+# Passed by build-candidate as --build-arg VERSION (build.sh forwards
+# $DOCKER_ARGS); "dev" for local builds. Runtime-only and last on purpose: a
+# new build number then invalidates no earlier layer.
+ARG VERSION="dev"
+ENV DD_VERSION=${VERSION}

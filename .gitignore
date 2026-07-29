@@ -1,0 +1,35 @@
+# This template supports Node, Python, and Ruby. After you pick a stack with
+# `bin/use-stack`, trim this to what you need.
+
+# Secrets & local env — NEVER commit these (the platform injects secrets)
+.env
+.env*.local
+*.pem
+
+# OS / editor
+.DS_Store
+.idea/
+*.swp
+
+# Node (TypeScript)
+node_modules/
+dist/
+npm-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Ruby
+/.bundle/
+/vendor/bundle
+*.gem
+
+# Logs & temp
+/log/*
+/tmp/*
+*.log

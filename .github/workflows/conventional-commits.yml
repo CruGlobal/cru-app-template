@@ -1,0 +1,42 @@
+name: Conventional Commits
+
+# The repo is squash-only, so the PR title becomes the squash commit subject.
+# This validates the title is a valid Conventional Commit so the history stays
+# machine-readable (and stays release-tooling-ready). Scope is optional (both
+# `feat:` and `feat(api):` are fine); `deps` is allowed to match Dependabot's
+# npm/bundler/pip prefix (.github/dependabot.yml). Mark "Validate PR Title" a
+# required check in the repo's branch ruleset (configured via TerraBloks /
+# cru-terraform) so it actually gates merges.
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+
+permissions:
+  pull-requests: read
+
+jobs:
+  semantic-pr:
+    name: Validate PR Title
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            chore
+            ci
+            docs
+            build
+            deps
+            perf
+            refactor
+            revert
+            style
+            test

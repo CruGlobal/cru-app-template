@@ -1,0 +1,6 @@
+source "https://rubygems.org"
+
+# DataDog Lambda instrumentation. The gem brings in ddtrace; native extensions
+# are compiled in the Dockerfile (see the build deps installed before
+# `bundle install`).
+gem "datadog-lambda"
