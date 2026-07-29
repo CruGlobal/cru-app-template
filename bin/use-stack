@@ -106,11 +106,12 @@ echo "→ Activating the $type / $lang stack ($type_label, from $stack)…"
 
 # Copy everything in the stack — including dotfiles like .tool-versions.
 cp -R "$stack/." .
-chmod +x build.sh
 
 # --- 2. Substitute placeholders ----------------------------------------------
 
-# Portable in-place sed (BSD sed's -i needs an argument; GNU's doesn't).
+# Portable in-place sed (BSD sed's -i needs an argument; GNU's doesn't). Note
+# that rewrite-and-mv resets the file mode to the umask default, so anything
+# that must stay executable is chmod'd AFTER this runs, not before.
 substitute() {
   local f
   for f in "$@"; do
@@ -125,6 +126,7 @@ substitute() {
 }
 
 substitute .github/workflows/pipeline-v2.yml package.json Dockerfile build.sh
+chmod +x build.sh
 
 # The template repository guards its own nightly run (it has no infrastructure).
 # Your repo doesn't need that, so drop the guard.
