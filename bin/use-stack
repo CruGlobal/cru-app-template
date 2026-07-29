@@ -196,7 +196,7 @@ EOF
 # is named `lint-and-build` — the fleet-standard required-check name. Mark it
 # required in the repo's branch ruleset (configured via TerraBloks /
 # cru-terraform) to gate merges and Dependabot auto-merge on it.
-echo "→ Writing .github/workflows/ci.yml for $lang…"
+echo "→ Writing .github/workflows/ci.yml for ${lang}…"
 mkdir -p .github/workflows
 
 ci_header() {
