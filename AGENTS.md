@@ -133,6 +133,38 @@ to chase.
 
 Watch a run with the GitHub CLI: `gh run watch` (or check the Actions tab).
 
+## Feature flags
+
+The pipeline runs a **feature-flag service**, and it is a first-class part of
+this platform — it is what replaces the `staging` branch v2 retired. Unfinished
+work merges to `main` **dark** behind a flag, a demo on stage is a flag flip, and
+launching is a flag flip in production.
+
+- **`CRU_FLAGS_URL` is injected by the app's Terraform module** in
+  release-candidate and production. It is absent locally, in CI and in `lab` — a
+  supported state meaning *every flag is off*, never a misconfiguration.
+- **Unknown flags read off**, so code can merge before its flag exists. Anything
+  behind a flag must behave with the flag off.
+- **Never build your own flag system** — no env-var toggles, no config table, no
+  hand-rolled fetch of `CRU_FLAGS_URL` — and never wrap the official client in
+  retries, caching or timeouts of your own: it already polls with `ETag`
+  revalidation and serves last-known-good through an outage. **App code never
+  writes a flag.**
+- **The CLI is the only writer**: `cru application flags create <name> -n <app>
+  --description "…"`, then `enable`/`disable` it `-e <stage|production>`. A flip
+  is live within about a minute — no build, no deploy.
+- **Use the client that matches this app's language:**
+
+  | language | client | reading a flag |
+  | --- | --- | --- |
+  | **nodejs** | `npm install @cruglobal/flags` | `flags.enabled("name")` — server side only |
+  | **python** | `pip install cru-flags` | `flags.enabled("name")` |
+  | **ruby** | stock Flipper — `flipper` + `flipper-active_support_cache_store`, wired by the canonical initializer in the pipeline guide (copy it exactly; the `Failsafe` adapter and the Marshal-safe read wrapper are load-bearing) | `Flipper.enabled?(:name)` |
+
+The full story — the CLI, the wire format, the Rails initializer — is the
+[pipeline guide's Feature flags section](https://github.com/CruGlobal/cru-deploy/blob/main/docs/pipeline-v2.md#feature-flags).
+An app's flags are visible on the dashboard at <https://deploys.cru.org>.
+
 ## Tests & CI
 
 `.github/workflows/ci.yml` runs on every pull request as the **`lint-and-build`**
@@ -172,6 +204,9 @@ will block on a check that never reports.
 - **Don't invent infrastructure.** If the app needs a database, queue, bucket,
   or new secret, that's a TerraBloks/`cru-terraform` change — say so and use the
   `terrabloks` MCP rather than configuring cloud resources by hand.
+- **Don't build a feature-flag system.** The pipeline already has one — see
+  [Feature flags](#feature-flags). Use the official client for the language and
+  flip flags with `cru application flags`.
 - **Never paste secrets** (API keys, passwords, tokens) into files. Use env
   vars; fetch real values through the Cru CLI.
 - **Never bake environment-specific values into the image** — see "The
