@@ -17,10 +17,9 @@
 # late. Scheduled dispatch is still best-effort, so a few minutes of lateness
 # is expected, not a failure.
 #
-# Pinned to the `pipeline-v2` branch of CruGlobal/.github (both the reusable
-# workflow and the actions) and passes workflow-ref: pipeline-v2 so the actions
-# the reusable workflow checks out match. Re-pin every `@pipeline-v2` reference
-# and the workflow-ref input to `@v2` at release.
+# Pinned to the released `v2` tag of CruGlobal/.github (both the reusable
+# workflow and the actions) and passes workflow-ref: v2 so the actions the
+# reusable workflow checks out match. `v2` tracks the latest v2.x release.
 name: Pipeline v2
 
 on:
@@ -37,7 +36,7 @@ jobs:
     # survives into your repo — your repository name is not the template's.
     if: github.repository != 'CruGlobal/cru-app-template'
     # <<< CRU-TEMPLATE-GUARD
-    uses: CruGlobal/.github/.github/workflows/build-candidate.yml@pipeline-v2
+    uses: CruGlobal/.github/.github/workflows/build-candidate.yml@v2
     # build-candidate's provider job authenticates to the cloud via OIDC (AWS
     # for ecs/lambda, GCP Workload Identity Federation plus AWS for cloudrun),
     # so the caller must grant id-token: write — a reusable workflow can only
@@ -46,7 +45,7 @@ jobs:
       id-token: write
       contents: read
     with:
-      workflow-ref: pipeline-v2
+      workflow-ref: v2
       # Which build recipe to use: ecs | lambda | cloudrun. Written by
       # bin/use-stack. This is the ONLY place the runtime type appears in this
       # repo — deploy, promote and rollback all resolve it server-side from the
@@ -62,7 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - uses: CruGlobal/.github/actions/dispatch@pipeline-v2
+      - uses: CruGlobal/.github/actions/dispatch@v2
         with:
           github-token: ${{ secrets.CRU_DEPLOY_GITHUB_TOKEN }}
           workflow: deploy-candidate.yml
