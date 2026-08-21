@@ -32,6 +32,7 @@ jobs:
             fix
             chore
             ci
+            docker
             docs
             build
             deps
