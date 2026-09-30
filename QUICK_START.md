@@ -93,7 +93,14 @@ and — if it's good — promoted byte-for-byte to production. There is **no
 All deployments happen in `cru-deploy`, never in this repo. **Builds fail until
 step 2's Terraform is applied** — that's expected, so don't chase it.
 
-## 4. The Cru CLI
+## 4. Connect to the database
+
+<!-- CRU:DATABASE -->
+**No stack is activated yet.** After activation, this section explains how the
+app connects to its Cloud SQL database.
+<!-- /CRU:DATABASE -->
+
+## 5. The Cru CLI
 
 The `cru` CLI talks to Cru's platform — use it to run commands against a real
 environment's injected secrets without ever copying secret values locally:

@@ -49,3 +49,14 @@ type-agnostic and this repo ships one pipeline for all three types.
   `.tool-versions`.
 - `.tool-versions` — the pinned language version (asdf / mise).
 - A dependency manifest, and a minimal app that already builds and works.
+
+## The database helper (server stacks only)
+
+Each `stacks/server/<language>/` also ships a small Cloud SQL connection helper
+(`src/db.ts`, `app/db.py` or `lib/db.rb`). ECS and Cloud Run share it. It does
+nothing until the app calls it, and it uses IAM login only when the `DATABASE_*`
+variables are set, so an ECS app is unaffected. Lambda stacks have none.
+
+Its docs live in `stacks/docs/database-<language>.md`. `bin/use-stack` copies the
+one for the chosen language into the `CRU:DATABASE` blocks of README.md,
+AGENTS.md and QUICK_START.md. Change the helper and its fragment together.

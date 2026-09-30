@@ -280,24 +280,25 @@ esac
 
 # Each of README.md, AGENTS.md and QUICK_START.md has one
 # <!-- CRU:STACK --> … <!-- /CRU:STACK --> block describing the not-yet-chosen
-# stack. Replace each with the facts of the stack we just activated, so the docs
-# stay true after activation instead of telling the reader to run this script
-# again.
+# stack, and a <!-- CRU:DATABASE --> … <!-- /CRU:DATABASE --> block for the
+# database helper. Replace each with the facts of the stack we just activated, so
+# the docs stay true after activation instead of telling the reader to run this
+# script again.
 # The replacement text is passed as a FILE, not as `awk -v`: BSD awk (what
 # macOS ships, and most of this fleet develops on a Mac) rejects a newline in a
 # -v value, so a multi-line block has to be read with getline.
 fill_block() {
-  local file="$1" body_file="$2"
+  local file="$1" name="$2" body_file="$3"
   [ -f "$file" ] || return 0
-  awk -v bf="$body_file" '
-    /<!-- CRU:STACK -->/ {
+  awk -v bf="$body_file" -v open="<!-- CRU:$name -->" -v close_tag="<!-- /CRU:$name -->" '
+    $0 == open {
       print
       while ((getline line < bf) > 0) print line
       close(bf)
       skip = 1
       next
     }
-    /<!-- \/CRU:STACK -->/ { skip = 0 }
+    $0 == close_tag { skip = 0 }
     !skip { print }
   ' "$file" > "$file.use-stack.tmp"
   mv "$file.use-stack.tmp" "$file"
@@ -306,9 +307,22 @@ fill_block() {
 # Per-combo specifics for the doc blocks.
 if [ "$family" = "server" ]; then
   case "$lang" in
-    nodejs) install_cmd='npm ci'; run_cmd='npm run dev'; entry='src/index.ts' ;;
-    python) install_cmd='pip install -r requirements.txt'; run_cmd='python app/main.py'; entry='app/main.py' ;;
-    ruby)   install_cmd='bundle install'; run_cmd='bundle exec puma'; entry='config.ru' ;;
+    nodejs)
+      install_cmd='npm ci'; run_cmd='npm run dev'; entry='src/index.ts'
+      db_file='src/db.ts'; db_call='getPool()'
+      db_vars='`DATABASE_HOST`, `DATABASE_NAME` and `DATABASE_USER`'
+      db_extra='- In a one-off script such as a migration, call `await closeDb()` in a `finally`
+  block, or the pool keeps the process alive and the job never exits.' ;;
+    python)
+      install_cmd='pip install -r requirements.txt'; run_cmd='python -m app.main'; entry='app/main.py'
+      db_file='app/db.py'; db_call='connect()'
+      db_vars='`DATABASE_HOST`, `DATABASE_NAME`, `DATABASE_USER` and `INSTANCE_CONNECTION_NAME`'
+      db_extra='' ;;
+    ruby)
+      install_cmd='bundle install'; run_cmd='bundle exec puma'; entry='config.ru'
+      db_file='lib/db.rb'; db_call='Db.connect'
+      db_vars='`DATABASE_HOST`, `DATABASE_NAME` and `DATABASE_USER`'
+      db_extra='' ;;
   esac
   shape_line="It listens on \`\$PORT\` (default \`8080\`) and answers **\`GET /health\`** (and \`/up\`) with \`{\"status\":\"ok\"}\`. Keep a health route working — $type_label judges every deploy by it."
 else
@@ -359,10 +373,65 @@ in **$lang**. It is provisioned with the
 Terraform module.
 EOF
 
+# The database helper ships in the server stacks only (ecs and cloudrun). The
+# README part is a fragment per language under stacks/docs/, because it carries
+# a code example and a dependency list.
+if [ "$family" = "server" ]; then
+  cp "stacks/docs/database-$lang.md" "$blocks/db_readme"
+
+  cat > "$blocks/db_agents" <<EOF
+The stack ships a database helper, \`$db_file\`. Use it instead of writing your own
+connection code, and never ask for or store a database password. It does nothing
+until you call \`$db_call\`, so an app with no database is unaffected.
+
+- **IAM mode** (the default on Cloud Run): $db_vars are set.
+  The service account logs in with IAM, so there is no password.
+- **Password mode** (works anywhere, including ECS): \`DATABASE_URL\` or
+  \`DATABASE_PASSWORD\` is set. It wins over IAM mode. Use it for a local Postgres.
+EOF
+  if [ -n "$db_extra" ]; then
+    echo "$db_extra" >> "$blocks/db_agents"
+  fi
+  cat >> "$blocks/db_agents" <<'EOF'
+
+The "Database (Cloud SQL)" section of README.md has the details and an example.
+EOF
+
+  cat > "$blocks/db_quickstart" <<EOF
+If the app has a Cloud SQL database (from step 2), the stack already has a small
+helper that connects to it: \`$db_file\`. Nothing connects at startup, so an app
+with no database is unaffected. Call the helper from your code when you need a
+connection. Code examples are in
+[README.md](./README.md#database-cloud-sql).
+
+IAM login is the default on Cloud Run. The service account is the database user
+and no password is stored. The platform sets the connection variables, and the
+helper picks its mode from them. IAM mode is used when these are set:
+$db_vars. Password mode is used when \`DATABASE_URL\` or \`DATABASE_PASSWORD\` is
+set. Password mode works anywhere, including ECS, and is how you use a local
+Postgres.
+
+A migrations job uses the same variables and the same helper. If you turn on
+\`database_migrations\` in the Terraform, call the helper from the migration
+script and no other wiring is needed.
+EOF
+else
+  cat > "$blocks/db_readme" <<EOF
+The lambda stacks have no database helper. If the function needs a database,
+that is a TerraBloks change (see [QUICK_START.md](./QUICK_START.md)). Read the
+connection settings from environment variables, and never commit a password.
+EOF
+  cp "$blocks/db_readme" "$blocks/db_agents"
+  cp "$blocks/db_readme" "$blocks/db_quickstart"
+fi
+
 echo "→ Filling in README.md, AGENTS.md and QUICK_START.md…"
-fill_block README.md "$blocks/readme"
-fill_block AGENTS.md "$blocks/agents"
-fill_block QUICK_START.md "$blocks/quickstart"
+fill_block README.md STACK "$blocks/readme"
+fill_block AGENTS.md STACK "$blocks/agents"
+fill_block QUICK_START.md STACK "$blocks/quickstart"
+fill_block README.md DATABASE "$blocks/db_readme"
+fill_block AGENTS.md DATABASE "$blocks/db_agents"
+fill_block QUICK_START.md DATABASE "$blocks/db_quickstart"
 
 # --- 6. Remove the scaffolding ----------------------------------------------
 

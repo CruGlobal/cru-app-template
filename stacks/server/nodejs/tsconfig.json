@@ -8,6 +8,7 @@
     "types": ["node"],
     "strict": true,
     "esModuleInterop": true,
+    "rewriteRelativeImportExtensions": true,
     "skipLibCheck": true,
     "sourceMap": true
   },

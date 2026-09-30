@@ -33,6 +33,14 @@ itself.
 describes the stack you chose, and how to install and run it.
 <!-- /CRU:STACK -->
 
+## Database (Cloud SQL)
+
+<!-- CRU:DATABASE -->
+**No stack is activated yet.** After `bin/use-stack`, this section describes the
+database helper that ships with the `ecs` and `cloudrun` stacks in your language,
+including how it logs in to Cloud SQL and which variables it reads.
+<!-- /CRU:DATABASE -->
+
 ## Deploying
 
 Merging to `main` does not deploy. A nightly build produces a candidate image

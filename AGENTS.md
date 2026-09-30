@@ -197,6 +197,13 @@ will block on a check that never reports.
   `secrets: inherit` and the reusable workflow exports only the `BUILD_*` keys
   into the build environment, with the prefix stripped.
 
+## Database access
+
+<!-- CRU:DATABASE -->
+**No stack is activated yet.** The `ecs` and `cloudrun` stacks ship a database
+helper; after activation this section names it and says how to use it.
+<!-- /CRU:DATABASE -->
+
 ## If you're not sure what to do
 
 - **Keep changes small and on a branch.** Open a PR; don't push straight to
