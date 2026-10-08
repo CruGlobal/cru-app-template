@@ -115,6 +115,15 @@ cru application secrets read --keys DATABASE_URL -e staging
 
 Run `cru --help` for the full command set.
 
+## 6. Flightdeck: work items, errors and releases
+
+Each app has a project in **Flightdeck**, Cru's work tracker, set up by the
+`flightdeck` setting in the app's Terraform (step 2). The app's work items live
+there, its errors are reported there through the Rollbar SDK, and the pipeline
+posts every deploy, promote and rollback to its release timeline. Coding agents
+use it through the `flightdeck` MCP server. [AGENTS.md](./AGENTS.md) explains
+how to file and claim work and how to wire up error reporting.
+
 ## Reference
 
 - **[AGENTS.md](./AGENTS.md)** — how coding agents should work in this repo.
@@ -122,3 +131,4 @@ Run `cru --help` for the full command set.
 - [`cru-deploy`](https://github.com/CruGlobal/cru-deploy) — where deployments, promotions and rollbacks run.
 - [`cru-app-template`](https://github.com/CruGlobal/cru-app-template) — the template this repo came from.
 - **deploys.cru.org** — the fleet dashboard: what is running where, and each app's deploy timeline.
+- **Flightdeck**: the app's work items, error reports and release timeline.
