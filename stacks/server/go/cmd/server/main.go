@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -94,10 +95,14 @@ func routes() http.Handler {
 	mux.HandleFunc("GET /health", health)
 	mux.HandleFunc("GET /up", health)
 
-	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		if email := signedInEmail(r); email != "" {
+			_, _ = fmt.Fprintf(w, "Hello, %s 👋\n", email)
+			return
+		}
 		_, _ = w.Write([]byte("Hello from your Cru app 👋\n"))
 	})
 
-	return mux
+	return requireIAP(mux)
 }
