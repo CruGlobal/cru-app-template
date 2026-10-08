@@ -24,6 +24,11 @@ Commit the result, then build your app on top of it. (See
 stack you chose and the Terraform module that provisions it.
 <!-- /CRU:STACK -->
 
+<!-- CRU:IAP -->
+**No stack is activated yet.** For the `ecs` and `cloudrun` stacks, this part
+then says how to sign in as yourself when you first run the app locally.
+<!-- /CRU:IAP -->
+
 ## 2. Provision the application (TerraBloks)
 
 All Cru cloud infrastructure is managed as code in the
@@ -51,11 +56,6 @@ permissions), plus its `CruApplicationInfo` record — which is what tells the
 pipeline your app's provider and type at deploy time. A maintainer reviews and
 applies it; applying creates the real resources and wires up the permissions this
 repo's CI uses to build.
-
-For a **`cloudrun`** app, TerraBloks puts **Google IAP** (Okta sign-in at the
-load balancer) in front of it by default, and the stack already checks IAP's
-assertion. To opt out, pick a different Okta option in the template. See
-[Sign-in (Google IAP)](./README.md#sign-in-google-iap).
 
 Under pipeline v2 the surfaces are **release-candidate** (the stage surface) and
 **production**.

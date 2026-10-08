@@ -284,24 +284,14 @@ ruleset — that's configured via TerraBloks / `cru-terraform`, not in this repo
 Don't rename the `lint-and-build` job without updating the ruleset, or merges
 will block on a check that never reports.
 
+<!-- CRU:IAP -->
 ## Sign-in (Google IAP)
 
-New `cloudrun` apps from TerraBloks sit behind Google IAP, with Okta sign-in at
-the load balancer. The server stacks verify IAP's assertion with
-[`cru-iap`](https://github.com/CruGlobal/cru-iap): when `IAP_AUDIENCE` is set,
-every route except `/up` needs it and anything else is a 401. When it's unset
-(ECS, local dev) there is no gate. The README's
-[Sign-in section](./README.md#sign-in-google-iap) has the details. Rules:
-
-- **Never weaken the gate.** No boolean "auth off" flag, no fallback identity
-  when `IAP_AUDIENCE` is set, and no opening a path just because the header is
-  missing. For a local identity use `CRU_IAP_DEV_BYPASS_EMAIL`.
-- **A path that skips sign-in needs both halves**: an `iap.bypass_paths` entry
-  in the Terraform (a TerraBloks / `cru-terraform` change) and an exemption in
-  the app's gate, plus its own credential check. Never read identity on it.
-- **Identity is only the email.** The assertion carries no groups. "Who may get
-  in" is the Okta group bound in Terraform, not app code.
-- **Sign out** with `/?gcp-iap-mode=CLEAR_LOGIN_COOKIE`.
+**No stack is activated yet.** After `bin/use-stack`, the `ecs` and `cloudrun`
+stacks fill this section in: their sign-in gate, the rules for changing it, and how to run them
+locally as yourself. Lambda apps have no gate, and the section goes
+away.
+<!-- /CRU:IAP -->
 
 ## Infrastructure & secrets
 

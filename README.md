@@ -41,31 +41,14 @@ database helper that ships with the `ecs` and `cloudrun` stacks in your language
 including how it logs in to Cloud SQL and which variables it reads.
 <!-- /CRU:DATABASE -->
 
+<!-- CRU:IAP -->
 ## Sign-in (Google IAP)
 
-New **`cloudrun`** apps from TerraBloks sit behind **Google Identity-Aware
-Proxy**: people sign in with Okta at the load balancer, before a request ever
-reaches the app. The `ecs` and `cloudrun` stacks check IAP's signed assertion
-with [`cru-iap`](https://github.com/CruGlobal/cru-iap):
-
-- **`IAP_AUDIENCE` set** (the platform sets it when IAP is on): every route
-  except the `/up` health check needs a verified assertion. Anything else gets
-  a 401 and an `iap_rejected` log line with the reason. `/` greets the
-  signed-in email.
-- **`IAP_AUDIENCE` unset** (ECS, an app that opted out of IAP, or your laptop):
-  no gate. To act as someone locally, run with
-  `CRU_IAP_DEV_BYPASS_EMAIL=you@cru.org`. The library refuses it whenever
-  `IAP_AUDIENCE` is set or the app is running on Cloud Run.
-- **Sign out** by linking to `/?gcp-iap-mode=CLEAR_LOGIN_COOKIE`. No app route
-  is needed.
-- **A path that must skip sign-in** (a webhook, a cron call) needs two things:
-  an entry in the Terraform's `iap.bypass_paths` (the default is `["/up"]`),
-  and an exemption in the app's gate, plus its own credential check.
-- **Opting out:** pick an Okta option other than IAP in TerraBloks. No
-  `IAP_AUDIENCE` is set, so the gate stays off.
-
-The gate lives in `src/app.ts` (Node), `app/main.py` (Python), `lib/app.rb`
-(Ruby) or `cmd/server/iap.go` (Go).
+**No stack is activated yet.** After `bin/use-stack`, the `ecs` and `cloudrun`
+stacks fill this section in: their sign-in gate, how to run them locally as
+yourself, and how to sign out. Lambda apps have no gate, and the section goes
+away.
+<!-- /CRU:IAP -->
 
 ## Deploying
 
