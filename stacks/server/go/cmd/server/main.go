@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -24,6 +25,7 @@ func main() {
 	// JSON lines on stdout, which Datadog parses into fields.
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(log)
+	loadDevEnv(".env.development")
 
 	if err := run(log); err != nil {
 		log.Error("server stopped", "error", err)
@@ -81,6 +83,22 @@ func run(log *slog.Logger) error {
 		return err
 	}
 	return nil
+}
+
+// loadDevEnv reads KEY=VALUE lines for a local run. The image never holds the
+// file (.dockerignore, and only the binary is copied), so this is a no-op once
+// deployed. Variables already set win.
+func loadDevEnv(path string) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return
+	}
+	for line := range strings.Lines(string(data)) {
+		key, value, ok := strings.Cut(strings.TrimSpace(line), "=")
+		if _, set := os.LookupEnv(key); ok && !set && !strings.HasPrefix(key, "#") {
+			_ = os.Setenv(key, value)
+		}
+	}
 }
 
 func routes() http.Handler {

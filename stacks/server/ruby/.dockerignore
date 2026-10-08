@@ -1,0 +1,3 @@
+# Local-only settings never go in the image. .env.development names a dev
+# identity that would sign anyone in on a platform with no IAP in front.
+.env*

@@ -7,6 +7,15 @@
 # CMD to boot Rails (e.g. `./bin/rails server -p $PORT`). Rails' own health
 # check lives at /up, which this starter already answers. Carry the IAP gate
 # over as the cru-iap README's Rails section shows, then delete lib/app.rb.
+# Local runs (puma defaults RACK_ENV to development; the Dockerfile sets
+# production) read .env.development. Variables already set win.
+if ENV.fetch("RACK_ENV", "development") == "development" && File.exist?(".env.development")
+  File.foreach(".env.development") do |line|
+    key, sep, value = line.strip.partition("=")
+    ENV[key] ||= value unless sep.empty? || key.start_with?("#")
+  end
+end
+
 require_relative "lib/app"
 
 # Rack prefers X-Forwarded-Host over Host. Google's load balancer never sets

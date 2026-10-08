@@ -62,4 +62,11 @@ def index():
 
 if __name__ == "__main__":
     # Local dev server; in the container gunicorn serves the app (see Dockerfile).
+    # Only this local run reads .env.development. Variables already set win.
+    if os.path.exists(".env.development"):
+        with open(".env.development") as env_file:
+            for line in env_file:
+                key, sep, value = line.strip().partition("=")
+                if sep and not key.startswith("#"):
+                    os.environ.setdefault(key, value)
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
