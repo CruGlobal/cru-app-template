@@ -518,6 +518,11 @@ EOF
   cp "$blocks/db_readme" "$blocks/db_quickstart"
 fi
 
+# How to report errors to Flightdeck with this stack's Rollbar SDK. One fragment
+# per family and language, because a server and a Lambda function flush
+# differently.
+cp "stacks/docs/errors-$family-$lang.md" "$blocks/errors"
+
 echo "→ Filling in README.md, AGENTS.md and QUICK_START.md…"
 fill_block README.md STACK "$blocks/readme"
 fill_block AGENTS.md STACK "$blocks/agents"
@@ -525,6 +530,7 @@ fill_block QUICK_START.md STACK "$blocks/quickstart"
 fill_block README.md DATABASE "$blocks/db_readme"
 fill_block AGENTS.md DATABASE "$blocks/db_agents"
 fill_block QUICK_START.md DATABASE "$blocks/db_quickstart"
+fill_block AGENTS.md ERRORS "$blocks/errors"
 
 # --- 6. Remove the scaffolding ----------------------------------------------
 

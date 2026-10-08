@@ -138,6 +138,9 @@ jobs:
               if ! grep -q "type: $type" "$work/.github/workflows/pipeline-v2.yml"; then
                 echo "::error::$type/$lang — pipeline-v2.yml does not say 'type: $type'"; fail=1
               fi
+              if grep -l 'No stack is activated yet' "$work"/README.md "$work"/AGENTS.md "$work"/QUICK_START.md; then
+                echo "::error::$type/$lang: a doc block was not filled in"; fail=1
+              fi
               if grep -q 'CRU-TEMPLATE-GUARD' "$work/.github/workflows/pipeline-v2.yml"; then
                 echo "::error::$type/$lang — the template guard survived activation"; fail=1
               fi

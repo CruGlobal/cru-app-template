@@ -29,6 +29,13 @@ ENV NODE_ENV=production
 EXPOSE 8080
 CMD ["node", "dist/index.js"]
 
+# The commit this image is built from, passed by build-candidate as
+# --build-arg GIT_SHA. Error reports send it as their code_version, so each
+# error lines up with the release that shipped it. Empty for local builds, and
+# placed near the end for the same reason as VERSION below.
+ARG GIT_SHA=""
+ENV GIT_SHA=${GIT_SHA}
+
 # Build identity -> Datadog version (D10 bare suffix, e.g. 2026-07-24-10058).
 # Passed by build-candidate as --build-arg VERSION (build.sh forwards
 # $DOCKER_ARGS); "dev" for local builds. Runtime-only and last on purpose: a

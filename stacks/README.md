@@ -49,9 +49,10 @@ message rather than scaffold something that can't read its secrets.
 
 ## What every stack contains
 
-- `Dockerfile` — ends with the fleet's `ARG VERSION="dev"` / `ENV
-  DD_VERSION=${VERSION}` pair, which `build-candidate` fills with the build
-  identity. Nothing environment-specific is ever baked in: pipeline v2 is
+- `Dockerfile` — ends with the `ARG GIT_SHA` / `ENV GIT_SHA` pair (the commit,
+  which error reports send as their code version) and then the fleet's
+  `ARG VERSION="dev"` / `ENV DD_VERSION=${VERSION}` pair, which
+  `build-candidate` fills with the build identity. Nothing environment-specific is ever baked in: pipeline v2 is
   build-once, and the same bytes run on release-candidate and production.
 - `build.sh` — what CI runs. It forwards `$DOCKER_ARGS` (tags, `--push`,
   `--build-arg VERSION`) and adds the language version read from
@@ -76,3 +77,13 @@ variables are set, so an ECS app is unaffected. Lambda stacks have none.
 Its docs live in `stacks/docs/database-<language>.md`. `bin/use-stack` copies the
 one for the chosen language into the `CRU:DATABASE` blocks of README.md,
 AGENTS.md and QUICK_START.md. Change the helper and its fragment together.
+
+## Error reporting examples
+
+Every stack, server and Lambda, has an example of reporting errors to Flightdeck
+through the Rollbar SDK, in `stacks/docs/errors-<server|lambda>-<language>.md`.
+`bin/use-stack` copies the one for the chosen stack into the `CRU:ERRORS` block
+of AGENTS.md. They are docs, not code the stack runs, because where an app hooks
+in its error reporting depends on the framework it grows into. Each example was
+run against a fake Rollbar endpoint before it went in: keep it that way when you
+change one, because a broken example here is copied into every new app.
