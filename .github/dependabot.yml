@@ -1,9 +1,11 @@
 # Dependency updates.
 #
-# bin/use-stack REWRITES this file on activation, prepending the package
-# ecosystem for the language you chose (npm / bundler / pip / gomod) ahead of
-# the two below. Until then only the language-independent ecosystems are
-# listed, because an un-activated repo has no dependency manifest at its root.
+# bin/use-stack REWRITES this file on activation: it adds the package ecosystem
+# for the language you chose (npm / bundler / pip / gomod) and a `docker` entry
+# for the app's Dockerfile, next to the github-actions entry below. Until then
+# only github-actions is listed. An un-activated repo has no dependency manifest
+# and no Dockerfile at its root, and Dependabot fails any job that finds nothing
+# to read.
 #
 # Everything is GROUPED — one PR per ecosystem per week for minor+patch, so the
 # dependabot-auto-merge workflow lands a single green PR instead of five. Major
@@ -28,13 +30,4 @@ updates:
           - "patch"
     commit-message:
       prefix: "ci"
-      include: "scope"
-
-  - package-ecosystem: "docker"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 2
-    commit-message:
-      prefix: "docker"
       include: "scope"
