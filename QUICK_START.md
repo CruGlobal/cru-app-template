@@ -9,7 +9,7 @@ covers day-to-day work; this file covers the platform around it.
 This template isn't tied to a runtime or a language. Pick both:
 
 ```bash
-bin/use-stack <ecs|cloudrun|lambda> <nodejs|ruby|python>
+bin/use-stack <ecs|cloudrun|lambda> <nodejs|ruby|python|go>
 ```
 
 That copies the chosen stack to the repo root — a minimal app with a

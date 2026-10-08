@@ -10,14 +10,14 @@ This repo starts from [`cru-app-template`](https://github.com/CruGlobal/cru-app-
 and isn't tied to a stack yet. A stack is two choices:
 
 ```bash
-bin/use-stack <ecs|cloudrun|lambda> <nodejs|ruby|python>
+bin/use-stack <ecs|cloudrun|lambda> <nodejs|ruby|python|go>
 ```
 
-|                | `nodejs`             | `ruby`                      | `python` |
-| -------------- | -------------------- | --------------------------- | -------- |
-| **`ecs`**      | TypeScript on Node   | Rack (upgradable to Rails)  | Flask    |
-| **`cloudrun`** | TypeScript on Node   | Rack (upgradable to Rails)  | Flask    |
-| **`lambda`**   | TypeScript handler   | Ruby handler                | Python handler |
+|                | `nodejs`             | `ruby`                      | `python`       | `go`              |
+| -------------- | -------------------- | --------------------------- | -------------- | ----------------- |
+| **`ecs`**      | TypeScript on Node   | Rack (upgradable to Rails)  | Flask          | `net/http` server |
+| **`cloudrun`** | TypeScript on Node   | Rack (upgradable to Rails)  | Flask          | `net/http` server |
+| **`lambda`**   | TypeScript handler   | Ruby handler                | Python handler | n/a               |
 
 - **type** — where it runs. `ecs` and `cloudrun` give you a web server that
   listens on `$PORT`; `lambda` gives you a handler invoked by an event.

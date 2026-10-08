@@ -1,9 +1,9 @@
 # Dependency updates.
 #
 # bin/use-stack REWRITES this file on activation, prepending the package
-# ecosystem for the language you chose (npm / bundler / pip) ahead of the two
-# below. Until then only the language-independent ecosystems are listed, because
-# an un-activated repo has no dependency manifest at its root.
+# ecosystem for the language you chose (npm / bundler / pip / gomod) ahead of
+# the two below. Until then only the language-independent ecosystems are
+# listed, because an un-activated repo has no dependency manifest at its root.
 #
 # Everything is GROUPED — one PR per ecosystem per week for minor+patch, so the
 # dependabot-auto-merge workflow lands a single green PR instead of five. Major
