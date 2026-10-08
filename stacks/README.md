@@ -78,6 +78,24 @@ Its docs live in `stacks/docs/database-<language>.md`. `bin/use-stack` copies th
 one for the chosen language into the `CRU:DATABASE` blocks of README.md,
 AGENTS.md and QUICK_START.md. Change the helper and its fragment together.
 
+## The IAP sign-in gate (server stacks only)
+
+Each server stack checks Google IAP's signed assertion with
+[`cru-iap`](https://github.com/CruGlobal/cru-iap) (`src/app.ts`, `app/main.py`,
+`lib/app.rb` or `cmd/server/iap.go`). The gate keys off deploy config, because
+the scaffold is shared by ECS and Cloud Run:
+
+- `IAP_AUDIENCE` set (TerraBloks' default for Cloud Run): every route but `/up`
+  needs a verified assertion, else 401. It fails closed and logs `iap_rejected`
+  with the reason.
+- `IAP_AUDIENCE` unset (ECS, Cloud Run without IAP, local dev): no gate.
+  `CRU_IAP_DEV_BYPASS_EMAIL` gives a local identity.
+
+`/up` stays open because the load balancer's `bypass_paths` sends it past IAP
+with no assertion. Ruby also strips `X-Forwarded-Host`, which Rack would
+otherwise trust for the host. Each stack has tests for the gate. Lambda stacks
+have no gate.
+
 ## Error reporting examples
 
 Every stack, server and Lambda, has an example of reporting errors to Flightdeck
