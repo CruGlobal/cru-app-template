@@ -25,11 +25,12 @@ log = logging.getLogger(__name__)
 app = Flask(__name__)
 
 
-# The sign-in gate. On Cloud Run, Google IAP signs people in with Okta before a
-# request gets here, and the platform sets IAP_AUDIENCE: then every route but
-# /up needs IAP's signed assertion, and anything else is a 401. Without
-# IAP_AUDIENCE (ECS, or local dev) there is no gate;
-# CRU_IAP_DEV_BYPASS_EMAIL=you@cru.org gives you a signed-in email locally.
+# The sign-in gate. Google IAP signs people in with Okta before a request gets
+# here, and the platform sets IAP_AUDIENCE. Every route but /up needs IAP's
+# signed assertion; anything else is a 401, so an app with no IAP in front
+# (ECS) must remove or replace this gate. Locally, CRU_IAP_DEV_BYPASS_EMAIL
+# (from .env.development) signs you in as that email; cru-iap ignores it when
+# IAP_AUDIENCE is set or on Cloud Run.
 # Sign out with /?gcp-iap-mode=CLEAR_LOGIN_COOKIE (cru_iap.logout_url()).
 @app.before_request
 def require_iap():
@@ -37,15 +38,8 @@ def require_iap():
     if request.path == "/up":  # the health check; the load balancer lets it skip IAP
         return None
 
-    # Gate on deploy config, never on the header being absent.
-    if not os.environ.get("IAP_AUDIENCE"):
-        bypass = dev_bypass()
-        g.email = bypass.email if bypass else None
-        return None
-
-    result = verify_request(request)
+    result = dev_bypass() or verify_request(request)
     if not result.ok:
-        # Fail closed: never fall back to a dev identity here.
         log.warning("iap_rejected", extra={"fields": {"reason": result.reason, "path": request.path}})
         return "Unauthorized", 401
     g.email = result.email

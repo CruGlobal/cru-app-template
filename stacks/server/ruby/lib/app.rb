@@ -14,24 +14,21 @@ $stdout.sync = true
 CruIap.logger = Log
 
 module App
-  # The sign-in gate. On Cloud Run, Google IAP signs people in with Okta before
-  # a request gets here, and the platform sets IAP_AUDIENCE: then every route
-  # but /up needs IAP's signed assertion, and anything else is a 401. Without
-  # IAP_AUDIENCE (ECS, or local dev) there is no gate;
-  # CRU_IAP_DEV_BYPASS_EMAIL=you@cru.org gives you a signed-in email locally.
+  # The sign-in gate. Google IAP signs people in with Okta before a request
+  # gets here, and the platform sets IAP_AUDIENCE. Every route but /up needs
+  # IAP's signed assertion; anything else is a 401, so an app with no IAP in
+  # front (ECS) must remove or replace this gate. Locally,
+  # CRU_IAP_DEV_BYPASS_EMAIL (from .env.development) signs you in as that
+  # email; cru-iap ignores it when IAP_AUDIENCE is set or on Cloud Run.
   # Sign out with /?gcp-iap-mode=CLEAR_LOGIN_COOKIE (CruIap.logout_url).
-  # Returns the email (nil when there is no gate), or false to reject.
+  # Returns the email (nil for /up), or false to reject.
   def self.authenticate(env)
     path = env["PATH_INFO"]
     return nil if path == "/up" # the health check; the load balancer lets it skip IAP
 
-    # Gate on deploy config, never on the header being absent.
-    return CruIap.dev_bypass&.email if ENV.fetch("IAP_AUDIENCE", "").empty?
-
-    result = CruIap::TokenVerifier.from_request(env)
+    result = CruIap.dev_bypass || CruIap::TokenVerifier.from_request(env)
     return result.email if result.ok?
 
-    # Fail closed: never fall back to a dev identity here.
     Log.warn("iap_rejected", reason: result.reason, path: path)
     false
   end

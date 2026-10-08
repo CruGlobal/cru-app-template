@@ -19,23 +19,26 @@ class AppTest < Minitest::Test
 
   def get(path) = Rack::MockRequest.new(APP).get(path)
 
-  def test_iap_audience_gates_everything_but_up
-    ENV["IAP_AUDIENCE"] = "/projects/1/global/backendServices/2"
-    ENV["CRU_IAP_DEV_BYPASS_EMAIL"] = "dev@example.com" # must not open the gate
-
+  def test_up_is_always_open
     assert_equal 200, get("/up").status
+  end
+
+  def test_everything_else_needs_an_assertion_or_the_dev_bypass
     assert_equal 401, get("/").status
     assert_equal 401, get("/health").status
   end
 
-  def test_no_gate_without_iap_audience
-    response = get("/")
-    assert_equal 200, response.status
-    assert_equal "Hello from your Cru app 👋", response.body
-  end
-
   def test_dev_bypass_names_the_user
     ENV["CRU_IAP_DEV_BYPASS_EMAIL"] = "dev@example.com"
-    assert_equal "Hello, dev@example.com 👋", get("/").body
+    response = get("/")
+    assert_equal 200, response.status
+    assert_equal "Hello, dev@example.com 👋", response.body
+  end
+
+  def test_iap_audience_ignores_the_dev_bypass
+    ENV["IAP_AUDIENCE"] = "/projects/1/global/backendServices/2"
+    ENV["CRU_IAP_DEV_BYPASS_EMAIL"] = "dev@example.com"
+    assert_equal 401, get("/").status
+    assert_equal 200, get("/up").status
   end
 end

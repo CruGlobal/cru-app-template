@@ -16,22 +16,25 @@ beforeEach(() => {
   delete process.env.CRU_IAP_DEV_BYPASS_EMAIL;
 });
 
-test("with IAP_AUDIENCE, /up is open and everything else needs an assertion", async () => {
-  process.env.IAP_AUDIENCE = "/projects/1/global/backendServices/2";
-  process.env.CRU_IAP_DEV_BYPASS_EMAIL = "dev@example.com"; // must not open the gate
-
+test("/up is always open", async () => {
   assert.equal((await fetch(`${base}/up`)).status, 200);
+});
+
+test("without an assertion or the dev bypass, everything else is a 401", async () => {
   assert.equal((await fetch(`${base}/`)).status, 401);
   assert.equal((await fetch(`${base}/health`)).status, 401);
 });
 
-test("without IAP_AUDIENCE there is no gate", async () => {
-  const res = await fetch(`${base}/`);
-  assert.equal(res.status, 200);
-  assert.equal(await res.text(), "Hello from your Cru app 👋");
-});
-
 test("without IAP_AUDIENCE the dev bypass names the user", async () => {
   process.env.CRU_IAP_DEV_BYPASS_EMAIL = "dev@example.com";
-  assert.equal(await (await fetch(`${base}/`)).text(), "Hello, dev@example.com 👋");
+  const res = await fetch(`${base}/`);
+  assert.equal(res.status, 200);
+  assert.equal(await res.text(), "Hello, dev@example.com 👋");
+});
+
+test("with IAP_AUDIENCE the dev bypass is ignored", async () => {
+  process.env.IAP_AUDIENCE = "/projects/1/global/backendServices/2";
+  process.env.CRU_IAP_DEV_BYPASS_EMAIL = "dev@example.com";
+  assert.equal((await fetch(`${base}/`)).status, 401);
+  assert.equal((await fetch(`${base}/up`)).status, 200);
 });

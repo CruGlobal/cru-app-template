@@ -7,22 +7,19 @@ const warn = (message: string, fields: Record<string, unknown> = {}) =>
   console.log(JSON.stringify({ severity: "WARNING", message, ...fields }));
 const logger = { warn: (message: string) => warn(message) };
 
-// The sign-in gate. On Cloud Run, Google IAP signs people in with Okta before a
-// request gets here, and the platform sets IAP_AUDIENCE: then every route but
-// /up needs IAP's signed assertion, and anything else is a 401. Without
-// IAP_AUDIENCE (ECS, or local dev) there is no gate;
-// CRU_IAP_DEV_BYPASS_EMAIL=you@cru.org gives you a signed-in email locally.
+// The sign-in gate. Google IAP signs people in with Okta before a request gets
+// here, and the platform sets IAP_AUDIENCE. Every route but /up needs IAP's
+// signed assertion; anything else is a 401, so an app with no IAP in front
+// (ECS) must remove or replace this gate. Locally, CRU_IAP_DEV_BYPASS_EMAIL
+// (from .env.development) signs you in as that email; cru-iap ignores it when
+// IAP_AUDIENCE is set or on Cloud Run.
 // Sign out with /?gcp-iap-mode=CLEAR_LOGIN_COOKIE (logoutUrl()).
-// Returns the email (null when there is no gate), or false to reject.
+// Returns the email (null for /up), or false to reject.
 async function authenticate(req: IncomingMessage, path: string): Promise<string | null | false> {
   if (path === "/up") return null; // the health check; the load balancer lets it skip IAP
 
-  // Gate on deploy config, never on the header being absent.
-  if (!process.env.IAP_AUDIENCE) return devBypass({ log: logger })?.email ?? null;
-
-  const result = await verifyRequest(req, { logger });
+  const result = devBypass({ log: logger }) ?? (await verifyRequest(req, { logger }));
   if (result.ok) return result.email;
-  // Fail closed: never fall back to a dev identity here.
   warn("iap_rejected", { reason: result.reason, path });
   return false;
 }
