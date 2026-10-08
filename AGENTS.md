@@ -28,6 +28,7 @@ already builds and works:
 | **nodejs**   | TypeScript on Node (Lambda bundles with esbuild)         |
 | **ruby**     | a minimal Rack app (one command upgrades it to full Rails — see `stacks/server/ruby/config.ru`), or a Ruby handler on Lambda |
 | **python**   | Flask, or a Python handler on Lambda                     |
+| **go**       | a plain `net/http` server (ECS and Cloud Run only: there is no Go stack for Lambda) |
 
 **Your first steps on a new app:**
 
@@ -38,7 +39,7 @@ already builds and works:
      → **`lambda`**. Choose **`cloudrun`** when the app belongs next to other
      GCP resources.
    - **language** — recommend **`nodejs`**; it's the most common here.
-2. Activate it: `bin/use-stack <ecs|cloudrun|lambda> <nodejs|ruby|python>`
+2. Activate it: `bin/use-stack <ecs|cloudrun|lambda> <nodejs|ruby|python|go>`
    That copies the stack to the repo root, writes the type into
    `.github/workflows/pipeline-v2.yml`, generates `.github/dependabot.yml` and
    `.github/workflows/ci.yml`, fills in the docs, and removes everything it no
@@ -71,7 +72,7 @@ activated stack and its run commands.
 │       ├── ci.yml                           # PR check: lint-and-build
 │       ├── conventional-commits.yml         # PR check: Validate PR Title
 │       └── dependabot-auto-merge.yml        # auto-merges safe dependency PRs
-└── <your app files>   # src/ (node), app/ or handler.py (python), config.ru or handler.rb (ruby)
+└── <your app files>   # src/ (node), app/ or handler.py (python), config.ru or handler.rb (ruby), cmd/ and internal/ (go)
 ```
 
 ## The Dockerfile
@@ -160,6 +161,11 @@ launching is a flag flip in production.
   | **nodejs** | `npm install @cruglobal/flags` | `flags.enabled("name")` — server side only |
   | **python** | `pip install cru-flags` | `flags.enabled("name")` |
   | **ruby** | stock Flipper — `flipper` + `flipper-active_support_cache_store`, wired by the canonical initializer in the pipeline guide (copy it exactly; the `Failsafe` adapter and the Marshal-safe read wrapper are load-bearing) | `Flipper.enabled?(:name)` |
+  | **go** | none yet | n/a |
+
+  A Go app has no official client yet. If it needs a flag, tell the user rather
+  than writing a client into the app: a client is shared work, and the pipeline
+  guide lists the rules any client has to follow.
 
 The full story — the CLI, the wire format, the Rails initializer — is the
 [pipeline guide's Feature flags section](https://github.com/CruGlobal/cru-deploy/blob/main/docs/pipeline-v2.md#feature-flags).

@@ -1,4 +1,4 @@
-# This template supports Node, Python, and Ruby. After you pick a stack with
+# This template supports Node, Python, Ruby, and Go. After you pick a stack with
 # `bin/use-stack`, trim this to what you need.
 
 # Secrets & local env — NEVER commit these (the platform injects secrets)
@@ -28,6 +28,10 @@ venv/
 /.bundle/
 /vendor/bundle
 *.gem
+
+# Go
+*.test
+coverage.out
 
 # Logs & temp
 /log/*

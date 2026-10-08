@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Activate one stack for this Cru app.
 #
-#   bin/use-stack <ecs|cloudrun|lambda> <nodejs|ruby|python>
+#   bin/use-stack <ecs|cloudrun|lambda> <nodejs|ruby|python|go>
 #
 # Two axes, because a Cru app is two independent choices:
 #
@@ -25,12 +25,13 @@ usage() {
 Usage: bin/use-stack <type> <language>
 
   type      ecs | cloudrun | lambda
-  language  nodejs | ruby | python
+  language  nodejs | ruby | python | go   (go: ecs and cloudrun only)
 
 Examples:
   bin/use-stack ecs nodejs
   bin/use-stack lambda python
   bin/use-stack cloudrun ruby
+  bin/use-stack ecs go
 EOF
 }
 
@@ -73,12 +74,56 @@ case "$lang" in
   nodejs) eco="npm" ;;
   ruby)   eco="bundler" ;;
   python) eco="pip" ;;
+  go)     eco="gomod" ;;
   *)
-    echo "Error: unknown language '$lang' (expected nodejs, ruby, or python)." >&2
+    echo "Error: unknown language '$lang' (expected nodejs, ruby, python, or go)." >&2
     usage
     exit 1
     ;;
 esac
+
+# There is no Go stack for Lambda. A Go function runs on Lambda's OS-only
+# runtime, which ignores AWS_LAMBDA_EXEC_WRAPPER, and that wrapper is how Cru's
+# secrets-lambda-extension injects secrets. See stacks/README.md.
+if [ "$family" = "lambda" ] && [ "$lang" = "go" ]; then
+  echo "Error: there is no Go stack for lambda. Use ecs or cloudrun for a Go app," >&2
+  echo "       or nodejs, ruby or python for a Lambda function." >&2
+  exit 1
+fi
+
+# Go names its module after the repository, the way `go mod init` would in a
+# fresh clone. The origin remote gives the real path. A copy with no remote, or
+# a remote that isn't on GitHub, falls back to the directory's name.
+go_module=""
+if [ "$lang" = "go" ]; then
+  remote="$(git remote get-url origin 2>/dev/null || true)"
+  case "$remote" in
+    *github.com[:/]*)
+      # What follows the host is owner/repo, after a port when the remote names
+      # one (ssh://git@github.com:22/..., or ssh.github.com:443 for SSH over
+      # the HTTPS port).
+      repo_path="${remote#*github.com}"
+      repo_path="${repo_path#[:/]}"
+      port="${repo_path%%/*}"
+      case "$port" in
+        "" | *[!0-9]*) ;;
+        *) repo_path="${repo_path#*/}" ;;
+      esac
+      repo_path="${repo_path%/}"
+      go_module="github.com/${repo_path%.git}"
+      ;;
+  esac
+  # Anything but exactly owner/repo in safe characters (an SSH host alias, a
+  # stray path) falls back to the directory name.
+  case "$go_module" in
+    github.com/*/*/* | *[!A-Za-z0-9._/-]*) go_module="" ;;
+    github.com/?*/?*) ;;
+    *) go_module="" ;;
+  esac
+  if [ -z "$go_module" ]; then
+    go_module="github.com/CruGlobal/$(basename "$root" | tr -c 'A-Za-z0-9._\n-' '-')"
+  fi
+fi
 
 stack="stacks/$family/$lang"
 
@@ -120,13 +165,20 @@ substitute() {
         -e "s|__CRU_TYPE_LABEL__|$type_label|g" \
         -e "s|__CRU_LANGUAGE__|$lang|g" \
         -e "s|__CRU_TF_MODULE__|$tf_module|g" \
+        -e "s|__CRU_GO_MODULE__|$go_module|g" \
         "$f" > "$f.use-stack.tmp"
     mv "$f.use-stack.tmp" "$f"
   done
 }
 
-substitute .github/workflows/pipeline-v2.yml package.json Dockerfile build.sh
+substitute .github/workflows/pipeline-v2.yml package.json Dockerfile build.sh go.mod
 chmod +x build.sh
+
+# `go build ./cmd/server` leaves a binary named server at the root. Ignore it
+# in Go apps only: in another language, server/ may well be source.
+if [ "$lang" = "go" ]; then
+  printf '\n# The binary `go build ./cmd/server` writes\n/server\n' >> .gitignore
+fi
 
 # The template repository guards its own nightly run (it has no infrastructure).
 # Your repo doesn't need that, so drop the guard.
@@ -274,6 +326,27 @@ YAML
 YAML
     } > .github/workflows/ci.yml
     ;;
+  go)
+    # Go tests always run: a Go stack ships with tests, and `go test` passes
+    # when a package has none.
+    { ci_header; cat <<'YAML'
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: .tool-versions
+      - name: Read the golangci-lint version from .tool-versions
+        id: lintver
+        run: echo "version=v$(awk '$1=="golangci-lint"{print $2}' .tool-versions)" >> "$GITHUB_OUTPUT"
+      - name: Lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: ${{ steps.lintver.outputs.version }}
+      - name: Build
+        run: go build ./...
+      - name: Test
+        run: go test -race ./...
+YAML
+    } > .github/workflows/ci.yml
+    ;;
 esac
 
 # --- 5. Fill the docs in -----------------------------------------------------
@@ -305,6 +378,9 @@ fill_block() {
 }
 
 # Per-combo specifics for the doc blocks.
+db_migrate='A migrations job uses the same variables and the same helper. If you turn on
+`database_migrations` in the Terraform, call the helper from the migration
+script and no other wiring is needed.'
 if [ "$family" = "server" ]; then
   case "$lang" in
     nodejs)
@@ -323,6 +399,16 @@ if [ "$family" = "server" ]; then
       db_file='lib/db.rb'; db_call='Db.connect'
       db_vars='`DATABASE_HOST`, `DATABASE_NAME` and `DATABASE_USER`'
       db_extra='' ;;
+    go)
+      install_cmd='go mod download'; run_cmd='go run ./cmd/server'; entry='cmd/server/main.go'
+      db_file='internal/db/db.go'; db_call='db.Open(ctx)'
+      db_vars='`DATABASE_HOST`, `DATABASE_NAME` and `DATABASE_USER`'
+      db_extra='- The pool connects lazily, so a wrong setting shows up on the first query,
+  not at startup. Call `pool.Ping(ctx)` after `db.Open` to fail fast instead.'
+      db_migrate='A migrations job uses the same variables and the same helper. The image holds
+only the `/server` binary, so give it a `migrate` subcommand (or build a second
+binary into the image) and point `database_migrations.command` at it. README.md
+shows both.' ;;
   esac
   shape_line="It listens on \`\$PORT\` (default \`8080\`) and answers **\`GET /health\`** (and \`/up\`) with \`{\"status\":\"ok\"}\`. Keep a health route working — $type_label judges every deploy by it."
 else
@@ -365,6 +451,15 @@ The image is built by \`.github/workflows/pipeline-v2.yml\`, which passes
 runtime type appears in this repo. Everything after the build (deploy, promote,
 rollback) resolves the type server-side from the app's CruApplicationInfo record.
 EOF
+
+if [ "$lang" = "go" ]; then
+  cat >> "$blocks/agents" <<'EOF'
+
+Before you push, run `golangci-lint run` and `go test -race ./...`. CI runs both,
+at the versions pinned in `.tool-versions`. Keep new packages under `internal/`
+and new programs under `cmd/<name>/`.
+EOF
+fi
 
 cat > "$blocks/quickstart" <<EOF
 This app's stack is **$type / $lang** — it runs on **$type_label** and is written
@@ -411,9 +506,7 @@ $db_vars. Password mode is used when \`DATABASE_URL\` or \`DATABASE_PASSWORD\` i
 set. Password mode works anywhere, including ECS, and is how you use a local
 Postgres.
 
-A migrations job uses the same variables and the same helper. If you turn on
-\`database_migrations\` in the Terraform, call the helper from the migration
-script and no other wiring is needed.
+$db_migrate
 EOF
 else
   cat > "$blocks/db_readme" <<EOF

@@ -3,10 +3,10 @@
 `bin/use-stack <type> <language>` copies one of these to the repo root and
 deletes the rest. Two axes:
 
-| Axis         | Values                          |
-| ------------ | ------------------------------- |
-| **type**     | `ecs`, `cloudrun`, `lambda`     |
-| **language** | `nodejs`, `ruby`, `python`      |
+| Axis         | Values                           |
+| ------------ | -------------------------------- |
+| **type**     | `ecs`, `cloudrun`, `lambda`      |
+| **language** | `nodejs`, `ruby`, `python`, `go` |
 
 ## Why there is no `stacks/ecs/` or `stacks/cloudrun/`
 
@@ -38,6 +38,15 @@ Registry, the Lambda-specific `--provenance=false`, and so on). Everything
 from the app's `CruApplicationInfo` record, which is why those workflows are
 type-agnostic and this repo ships one pipeline for all three types.
 
+## Why there is no `stacks/lambda/go/`
+
+Go is a server stack only, for `ecs` and `cloudrun`. A Go function runs on
+Lambda's OS-only runtime (the `provided` family), and AWS does not run
+`AWS_LAMBDA_EXEC_WRAPPER` scripts there. That wrapper is how Cru's
+secrets-lambda-extension puts secrets into a function's environment, so a Go
+Lambda would start without them. `bin/use-stack lambda go` refuses with a clear
+message rather than scaffold something that can't read its secrets.
+
 ## What every stack contains
 
 - `Dockerfile` — ends with the fleet's `ARG VERSION="dev"` / `ENV
@@ -50,10 +59,17 @@ type-agnostic and this repo ships one pipeline for all three types.
 - `.tool-versions` — the pinned language version (asdf / mise).
 - A dependency manifest, and a minimal app that already builds and works.
 
+The Go stack also ships `.golangci.yml` and pins `golangci-lint` in
+`.tool-versions`, because its CI lints. Its `go.mod` names the module
+`__CRU_GO_MODULE__`, which `bin/use-stack` replaces with the repository's path
+(`github.com/<owner>/<repo>`, from the `origin` remote or else the directory
+name).
+
 ## The database helper (server stacks only)
 
 Each `stacks/server/<language>/` also ships a small Cloud SQL connection helper
-(`src/db.ts`, `app/db.py` or `lib/db.rb`). ECS and Cloud Run share it. It does
+(`src/db.ts`, `app/db.py`, `lib/db.rb` or `internal/db/db.go`). ECS and Cloud Run
+share it. It does
 nothing until the app calls it, and it uses IAM login only when the `DATABASE_*`
 variables are set, so an ECS app is unaffected. Lambda stacks have none.
 

@@ -36,6 +36,11 @@ jobs:
         with:
           ruby-version: '3.4'
 
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: stacks/server/go/.tool-versions
+          cache-dependency-path: stacks/server/go/go.sum
+
       - name: Install check tooling
         run: pip install --quiet pyyaml
 
@@ -68,16 +73,45 @@ jobs:
             echo "::endgroup::"
           done
 
+      - name: Read the Go stack's golangci-lint version
+        id: lintver
+        run: echo "version=v$(awk '$1=="golangci-lint"{print $2}' stacks/server/go/.tool-versions)" >> "$GITHUB_OUTPUT"
+
+      - name: Go stack lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: ${{ steps.lintver.outputs.version }}
+          working-directory: stacks/server/go
+
+      - name: Go stack build & test
+        working-directory: stacks/server/go
+        run: |
+          go build ./...
+          go test -race ./...
+
       # The real check: activate every combo in a throwaway copy and assert the
       # script left the repo in the shape an app expects.
       - name: Activate every (type, language) combo
         run: |
           fail=0
           for type in ecs cloudrun lambda; do
-            for lang in nodejs ruby python; do
+            for lang in nodejs ruby python go; do
               work="$RUNNER_TEMP/$type-$lang"
               rm -rf "$work"; mkdir -p "$work"
               git archive HEAD | tar -x -C "$work"
+
+              # There is no Go stack for Lambda: the script must refuse it and
+              # leave the repo untouched.
+              if [ "$type" = lambda ] && [ "$lang" = go ]; then
+                if (cd "$work" && bin/use-stack "$type" "$lang") > "$work.log" 2>&1; then
+                  echo "::error::$type/$lang: bin/use-stack should have refused this combo"; fail=1
+                elif [ ! -d "$work/stacks" ] || [ -e "$work/Dockerfile" ]; then
+                  echo "::error::$type/$lang: the refusal changed the repo"; fail=1
+                else
+                  echo "✓ $type/$lang refused"
+                fi
+                continue
+              fi
 
               if ! (cd "$work" && bin/use-stack "$type" "$lang") > "$work.log" 2>&1; then
                 echo "::error::$type/$lang — bin/use-stack failed"
@@ -117,6 +151,13 @@ jobs:
                    "$work/.github/workflows/ci.yml" \
                    "$work/.github/dependabot.yml"; then
                 echo "::error::$type/$lang — generated YAML does not parse"; fail=1
+              fi
+              # The module path is filled in at activation, so prove the
+              # activated Go app still builds and passes its tests.
+              if [ "$lang" = go ] && ! (cd "$work" && go build ./... && go test ./...) > "$work.go.log" 2>&1; then
+                echo "::error::$type/$lang: the activated Go app does not build"
+                cat "$work.go.log"
+                fail=1
               fi
 
               echo "✓ $type/$lang"
