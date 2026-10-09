@@ -6,8 +6,6 @@ import (
 	"testing"
 )
 
-// TestRoutes runs signed in through the dev bypass, so it sees the routes
-// rather than the sign-in gate.
 func TestRoutes(t *testing.T) {
 	t.Setenv("IAP_AUDIENCE", "")
 	t.Setenv("CRU_IAP_DEV_BYPASS_EMAIL", "dev@example.com")

@@ -523,10 +523,8 @@ fi
 # differently.
 cp "stacks/docs/errors-$family-$lang.md" "$blocks/errors"
 
-# The IAP sign-in gate ships in the server stacks only. Its doc blocks depend on
-# the type: Cloud Run sits behind IAP by default, while ECS has no IAP in front,
-# so the gate 401s everything there until the app removes or replaces it. A
-# Lambda app has no gate, so its blocks are emptied.
+# The IAP gate ships in server stacks only; ECS has no IAP in front, so its docs
+# say to remove the gate. Lambda has no gate, so its blocks are emptied.
 : > "$blocks/iap_readme"; : > "$blocks/iap_agents"; : > "$blocks/iap_quickstart"
 if [ "$family" = "server" ]; then
   if [ "$type" = "cloudrun" ]; then

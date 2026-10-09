@@ -3,8 +3,7 @@ source "https://rubygems.org"
 gem "rack", "~> 3.1"
 gem "puma", "~> 6.4"
 
-# Verifies Google IAP's sign-in assertion (lib/app.rb). Installed from git, so
-# bump the tag to upgrade.
+# Verifies Google IAP's sign-in assertion (lib/app.rb); bump the tag to upgrade.
 gem "cru_iap", github: "CruGlobal/cru-iap", tag: "v0.2.1"
 
 # Database helper (lib/db.rb). Nothing loads these until the app requires it.

@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-# The app's routes. config.ru serves them; test/app_test.rb tests them.
 require "json"
 require "cru_iap"
 
@@ -14,14 +13,8 @@ $stdout.sync = true
 CruIap.logger = Log
 
 module App
-  # The sign-in gate. Google IAP signs people in with Okta before a request
-  # gets here, and the platform sets IAP_AUDIENCE. Every route but /up needs
-  # IAP's signed assertion; anything else is a 401, so an app with no IAP in
-  # front (ECS) must remove or replace this gate. Locally,
-  # CRU_IAP_DEV_BYPASS_EMAIL (from .env.development) signs you in as that
-  # email; cru-iap ignores it when IAP_AUDIENCE is set or on Cloud Run.
-  # Sign out with /?gcp-iap-mode=CLEAR_LOGIN_COOKIE (CruIap.logout_url).
-  # Returns the email (nil for /up), or false to reject.
+  # IAP sign-in gate: 401 for all but /up. ECS has no IAP in front, so an ECS app
+  # must remove or replace it.
   def self.authenticate(env)
     path = env["PATH_INFO"]
     return nil if path == "/up" # the health check; the load balancer lets it skip IAP
@@ -38,8 +31,7 @@ module App
     return [401, { "content-type" => "text/plain; charset=utf-8" }, ["Unauthorized"]] if email == false
 
     case env["PATH_INFO"]
-    # Health check — the platform pings this to know the app is alive. Keep a
-    # 200 here working or deploys will be marked unhealthy.
+    # Health check: keep a 200 here or deploys are marked unhealthy.
     when "/health", "/up"
       [200, { "content-type" => "application/json" }, [{ status: "ok" }.to_json]]
     else

@@ -25,13 +25,8 @@ log = logging.getLogger(__name__)
 app = Flask(__name__)
 
 
-# The sign-in gate. Google IAP signs people in with Okta before a request gets
-# here, and the platform sets IAP_AUDIENCE. Every route but /up needs IAP's
-# signed assertion; anything else is a 401, so an app with no IAP in front
-# (ECS) must remove or replace this gate. Locally, CRU_IAP_DEV_BYPASS_EMAIL
-# (from .env.development) signs you in as that email; cru-iap ignores it when
-# IAP_AUDIENCE is set or on Cloud Run.
-# Sign out with /?gcp-iap-mode=CLEAR_LOGIN_COOKIE (cru_iap.logout_url()).
+# IAP sign-in gate: 401 for all but /up. ECS has no IAP in front, so an ECS app
+# must remove or replace it.
 @app.before_request
 def require_iap():
     g.email = None

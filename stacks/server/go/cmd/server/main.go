@@ -85,9 +85,7 @@ func run(log *slog.Logger) error {
 	return nil
 }
 
-// loadDevEnv reads KEY=VALUE lines for a local run. The image never holds the
-// file (.dockerignore, and only the binary is copied), so this is a no-op once
-// deployed. Variables already set win.
+// loadDevEnv reads KEY=VALUE lines for a local run; variables already set win.
 func loadDevEnv(path string) {
 	data, err := os.ReadFile(path)
 	if err != nil {
