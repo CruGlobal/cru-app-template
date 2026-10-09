@@ -17,7 +17,8 @@ module App
   # must remove or replace it.
   def self.authenticate(env)
     path = env["PATH_INFO"]
-    return nil if path == "/up" # the health check; the load balancer lets it skip IAP
+    # /up is the health probe: it calls the container directly, with no IAP assertion.
+    return nil if path == "/up"
 
     result = CruIap.dev_bypass || CruIap::TokenVerifier.from_request(env)
     return result.email if result.ok?
@@ -35,8 +36,7 @@ module App
     when "/health", "/up"
       [200, { "content-type" => "application/json" }, [{ status: "ok" }.to_json]]
     else
-      greeting = email ? "Hello, #{email} 👋" : "Hello from your Cru app 👋"
-      [200, { "content-type" => "text/plain; charset=utf-8" }, [greeting]]
+      [200, { "content-type" => "text/plain; charset=utf-8" }, ["Hello, #{email} 👋"]]
     end
   end
 end

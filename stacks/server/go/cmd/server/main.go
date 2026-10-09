@@ -113,11 +113,7 @@ func routes() http.Handler {
 
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		if email := signedInEmail(r); email != "" {
-			_, _ = fmt.Fprintf(w, "Hello, %s 👋\n", email)
-			return
-		}
-		_, _ = w.Write([]byte("Hello from your Cru app 👋\n"))
+		_, _ = fmt.Fprintf(w, "Hello, %s 👋\n", signedInEmail(r))
 	})
 
 	return requireIAP(mux)

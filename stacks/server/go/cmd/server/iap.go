@@ -14,7 +14,7 @@ type emailKey struct{}
 // so an ECS app must remove or replace it.
 func requireIAP(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// /up is the health check, and the load balancer lets it skip IAP.
+		// /up is the health probe: it calls the container directly, with no IAP assertion.
 		if r.URL.Path == "/up" {
 			next.ServeHTTP(w, r)
 			return
@@ -33,7 +33,7 @@ func requireIAP(next http.Handler) http.Handler {
 	})
 }
 
-// signedInEmail is the email requireIAP verified, or "" on /up.
+// signedInEmail is the email requireIAP verified.
 func signedInEmail(r *http.Request) string {
 	email, _ := r.Context().Value(emailKey{}).(string)
 	return email

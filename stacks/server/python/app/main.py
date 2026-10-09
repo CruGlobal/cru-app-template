@@ -29,8 +29,8 @@ app = Flask(__name__)
 # must remove or replace it.
 @app.before_request
 def require_iap():
-    g.email = None
-    if request.path == "/up":  # the health check; the load balancer lets it skip IAP
+    # /up is the health probe: it calls the container directly, with no IAP assertion.
+    if request.path == "/up":
         return None
 
     result = dev_bypass() or verify_request(request)
@@ -51,8 +51,7 @@ def health():
 
 @app.get("/")
 def index():
-    greeting = f"Hello, {g.email} 👋" if g.email else "Hello from your Cru app 👋"
-    return greeting, {"content-type": "text/plain; charset=utf-8"}
+    return f"Hello, {g.email} 👋", {"content-type": "text/plain; charset=utf-8"}
 
 
 if __name__ == "__main__":

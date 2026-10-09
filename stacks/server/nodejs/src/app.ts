@@ -9,7 +9,8 @@ const logger = { warn: (message: string) => warn(message) };
 // IAP sign-in gate: 401 for all but /up. ECS has no IAP in front, so an ECS app
 // must remove or replace it.
 async function authenticate(req: IncomingMessage, path: string): Promise<string | null | false> {
-  if (path === "/up") return null; // the health check; the load balancer lets it skip IAP
+  // /up is the health probe: it calls the container directly, with no IAP assertion.
+  if (path === "/up") return null;
 
   const result = devBypass({ log: logger }) ?? (await verifyRequest(req, { logger }));
   if (result.ok) return result.email;
@@ -35,5 +36,5 @@ export async function handler(req: IncomingMessage, res: ServerResponse) {
   }
 
   res.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
-  res.end(email ? `Hello, ${email} 👋` : "Hello from your Cru app 👋");
+  res.end(`Hello, ${email} 👋`);
 }
