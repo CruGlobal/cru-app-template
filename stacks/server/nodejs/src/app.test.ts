@@ -22,7 +22,7 @@ test("/up is always open", async () => {
 
 test("without an assertion or the dev bypass, everything else is a 401", async () => {
   assert.equal((await fetch(`${base}/`)).status, 401);
-  assert.equal((await fetch(`${base}/health`)).status, 401);
+  assert.equal((await fetch(`${base}/nope`)).status, 401);
 });
 
 test("without IAP_AUDIENCE the dev bypass names the user", async () => {

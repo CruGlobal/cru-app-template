@@ -33,7 +33,7 @@ module App
 
     case env["PATH_INFO"]
     # Health check: keep a 200 here or deploys are marked unhealthy.
-    when "/health", "/up"
+    when "/up"
       [200, { "content-type" => "application/json" }, [{ status: "ok" }.to_json]]
     else
       [200, { "content-type" => "text/plain; charset=utf-8" }, ["Hello, #{email} 👋"]]

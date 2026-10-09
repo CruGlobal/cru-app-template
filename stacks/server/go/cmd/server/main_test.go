@@ -14,7 +14,6 @@ func TestRoutes(t *testing.T) {
 		path string
 		want int
 	}{
-		{"/health", http.StatusOK},
 		{"/up", http.StatusOK},
 		{"/", http.StatusOK},
 		{"/nope", http.StatusNotFound},
@@ -47,7 +46,7 @@ func TestEverythingElseNeedsAnAssertionOrTheDevBypass(t *testing.T) {
 	t.Setenv("IAP_AUDIENCE", "")
 	t.Setenv("CRU_IAP_DEV_BYPASS_EMAIL", "")
 
-	for _, path := range []string{"/", "/health"} {
+	for _, path := range []string{"/", "/nope"} {
 		if rec := get(t, path); rec.Code != http.StatusUnauthorized {
 			t.Errorf("GET %s = %d, want 401", path, rec.Code)
 		}

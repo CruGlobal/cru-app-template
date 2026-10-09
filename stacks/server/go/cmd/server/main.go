@@ -104,12 +104,10 @@ func routes() http.Handler {
 
 	// Health check: the platform calls this to know the app is alive. Keep a 200
 	// here working, or deploys are marked unhealthy.
-	health := func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("GET /up", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
-	}
-	mux.HandleFunc("GET /health", health)
-	mux.HandleFunc("GET /up", health)
+	})
 
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")

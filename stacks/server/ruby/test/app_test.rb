@@ -25,7 +25,7 @@ class AppTest < Minitest::Test
 
   def test_everything_else_needs_an_assertion_or_the_dev_bypass
     assert_equal 401, get("/").status
-    assert_equal 401, get("/health").status
+    assert_equal 401, get("/nope").status
   end
 
   def test_dev_bypass_names_the_user

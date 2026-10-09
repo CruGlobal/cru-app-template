@@ -410,7 +410,7 @@ only the `/server` binary, so give it a `migrate` subcommand (or build a second
 binary into the image) and point `database_migrations.command` at it. README.md
 shows both.' ;;
   esac
-  shape_line="It listens on \`\$PORT\` (default \`8080\`) and answers **\`GET /health\`** (and \`/up\`) with \`{\"status\":\"ok\"}\`. Keep a health route working — $type_label judges every deploy by it."
+  shape_line="It listens on \`\$PORT\` (default \`8080\`) and answers **\`GET /up\`** with \`{\"status\":\"ok\"}\`. Keep it working — $type_label judges every deploy by it."
 else
   case "$lang" in
     nodejs) install_cmd='npm ci'; run_cmd='npm run build, then call the exported handler'; entry='src/index.ts' ;;

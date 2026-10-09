@@ -16,7 +16,7 @@ def test_up_is_always_open(client):
 
 def test_everything_else_needs_an_assertion_or_the_dev_bypass(client):
     assert client.get("/").status_code == 401
-    assert client.get("/health").status_code == 401
+    assert client.get("/nope").status_code == 401
 
 
 def test_dev_bypass_names_the_user(client, monkeypatch):

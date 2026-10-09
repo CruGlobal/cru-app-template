@@ -43,7 +43,6 @@ def require_iap():
 
 # Health check — the platform pings this to know the app is alive. Keep a 200
 # here working or deploys will be marked unhealthy.
-@app.get("/health")
 @app.get("/up")
 def health():
     return {"status": "ok"}

@@ -29,7 +29,7 @@ export async function handler(req: IncomingMessage, res: ServerResponse) {
   }
 
   // Health check: keep a 200 here or deploys are marked unhealthy.
-  if (path === "/health" || path === "/up") {
+  if (path === "/up") {
     res.writeHead(200, { "content-type": "application/json" });
     res.end(JSON.stringify({ status: "ok" }));
     return;
