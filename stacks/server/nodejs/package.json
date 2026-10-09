@@ -10,9 +10,11 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "node --watch src/index.ts"
+    "dev": "node --env-file-if-exists=.env.development --watch src/index.ts",
+    "test": "node --test \"src/**/*.test.ts\""
   },
   "dependencies": {
+    "@cruglobal/cru-iap": "^0.2.1",
     "google-auth-library": "^11.1.0",
     "pg": "^8.23.0"
   },

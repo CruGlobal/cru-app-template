@@ -78,6 +78,28 @@ Its docs live in `stacks/docs/database-<language>.md`. `bin/use-stack` copies th
 one for the chosen language into the `CRU:DATABASE` blocks of README.md,
 AGENTS.md and QUICK_START.md. Change the helper and its fragment together.
 
+## The IAP sign-in gate (server stacks only)
+
+Each server stack checks Google IAP's signed assertion with
+[`cru-iap`](https://github.com/CruGlobal/cru-iap) (`src/app.ts`, `app/main.py`,
+`lib/app.rb` or `cmd/server/iap.go`). Every route but `/up` needs a verified
+assertion, else 401 with an `iap_rejected` log line. It fails closed in every
+environment, even with `IAP_AUDIENCE` unset, so **an ECS app (no IAP in front)
+must remove or replace the gate**. `/up` stays open because it is the health
+check, and the load balancer's `bypass_paths` sends it past IAP.
+
+Locally, `CRU_IAP_DEV_BYPASS_EMAIL` supplies the identity. Each stack ships
+`.env.development` with a `replace-me@cru.org` placeholder, read only by the
+local run command (`npm run dev`, `python -m app.main`, puma outside
+production, `go run`), and a `.dockerignore` that keeps it out of the image.
+cru-iap also refuses the bypass when `IAP_AUDIENCE` is set or on Cloud Run.
+Ruby also strips `X-Forwarded-Host`, which Rack would otherwise trust for the
+host.
+
+`bin/use-stack` fills the `CRU:IAP` blocks of README.md, AGENTS.md and
+QUICK_START.md for the chosen type (Cloud Run: IAP on by default; ECS: remove
+the gate) and empties them for Lambda, which has no gate.
+
 ## Error reporting examples
 
 Every stack, server and Lambda, has an example of reporting errors to Flightdeck

@@ -384,23 +384,23 @@ script and no other wiring is needed.'
 if [ "$family" = "server" ]; then
   case "$lang" in
     nodejs)
-      install_cmd='npm ci'; run_cmd='npm run dev'; entry='src/index.ts'
+      install_cmd='npm ci'; run_cmd='npm run dev'; entry='src/index.ts'; gate_file='src/app.ts'
       db_file='src/db.ts'; db_call='getPool()'
       db_vars='`DATABASE_HOST`, `DATABASE_NAME` and `DATABASE_USER`'
       db_extra='- In a one-off script such as a migration, call `await closeDb()` in a `finally`
   block, or the pool keeps the process alive and the job never exits.' ;;
     python)
-      install_cmd='pip install -r requirements.txt'; run_cmd='python -m app.main'; entry='app/main.py'
+      install_cmd='pip install -r requirements.txt'; run_cmd='python -m app.main'; entry='app/main.py'; gate_file='app/main.py'
       db_file='app/db.py'; db_call='connect()'
       db_vars='`DATABASE_HOST`, `DATABASE_NAME`, `DATABASE_USER` and `INSTANCE_CONNECTION_NAME`'
       db_extra='' ;;
     ruby)
-      install_cmd='bundle install'; run_cmd='bundle exec puma'; entry='config.ru'
+      install_cmd='bundle install'; run_cmd='bundle exec puma'; entry='config.ru'; gate_file='lib/app.rb'
       db_file='lib/db.rb'; db_call='Db.connect'
       db_vars='`DATABASE_HOST`, `DATABASE_NAME` and `DATABASE_USER`'
       db_extra='' ;;
     go)
-      install_cmd='go mod download'; run_cmd='go run ./cmd/server'; entry='cmd/server/main.go'
+      install_cmd='go mod download'; run_cmd='go run ./cmd/server'; entry='cmd/server/main.go'; gate_file='cmd/server/iap.go'
       db_file='internal/db/db.go'; db_call='db.Open(ctx)'
       db_vars='`DATABASE_HOST`, `DATABASE_NAME` and `DATABASE_USER`'
       db_extra='- The pool connects lazily, so a wrong setting shows up on the first query,
@@ -410,7 +410,7 @@ only the `/server` binary, so give it a `migrate` subcommand (or build a second
 binary into the image) and point `database_migrations.command` at it. README.md
 shows both.' ;;
   esac
-  shape_line="It listens on \`\$PORT\` (default \`8080\`) and answers **\`GET /health\`** (and \`/up\`) with \`{\"status\":\"ok\"}\`. Keep a health route working — $type_label judges every deploy by it."
+  shape_line="It listens on \`\$PORT\` (default \`8080\`) and answers **\`GET /up\`** with \`{\"status\":\"ok\"}\`. Keep it working — $type_label judges every deploy by it."
 else
   case "$lang" in
     nodejs) install_cmd='npm ci'; run_cmd='npm run build, then call the exported handler'; entry='src/index.ts' ;;
@@ -523,6 +523,85 @@ fi
 # differently.
 cp "stacks/docs/errors-$family-$lang.md" "$blocks/errors"
 
+# The IAP gate ships in server stacks only; ECS has no IAP in front, so its docs
+# say to remove the gate. Lambda has no gate, so its blocks are emptied.
+: > "$blocks/iap_readme"; : > "$blocks/iap_agents"; : > "$blocks/iap_quickstart"
+if [ "$family" = "server" ]; then
+  if [ "$type" = "cloudrun" ]; then
+    iap_lead='TerraBloks puts **Google Identity-Aware Proxy** in front of new Cloud Run
+apps by default: people sign in with Okta at the load balancer, before a request
+reaches the app, and the platform sets `IAP_AUDIENCE`.'
+  else
+    iap_lead='**This is an ECS app, and ECS has no IAP in front of it.** The starter still
+ships the sign-in gate, so once deployed every route but `/up` answers 401.
+Remove the gate, or replace it with the sign-in the app needs, before you rely
+on a deploy.'
+  fi
+
+  cat > "$blocks/iap_readme" <<EOF
+## Sign-in (Google IAP)
+
+$iap_lead
+
+The gate is in \`$gate_file\` and uses
+[\`cru-iap\`](https://github.com/CruGlobal/cru-iap):
+
+- Every route except the \`/up\` health check needs IAP's signed assertion.
+  Anything else gets a 401 and an \`iap_rejected\` log line with the reason.
+  \`/\` greets the signed-in email.
+- **Running locally:** \`.env.development\` sets
+  \`CRU_IAP_DEV_BYPASS_EMAIL=replace-me@cru.org\`. Replace it with your own
+  email, and \`$run_cmd\` signs every request in as you. cru-iap ignores it
+  when \`IAP_AUDIENCE\` is set or on Cloud Run, and \`.dockerignore\` keeps the
+  file out of the image.
+- **Sign out** by linking to \`/?gcp-iap-mode=CLEAR_LOGIN_COOKIE\`.
+EOF
+  if [ "$type" = "cloudrun" ]; then
+    cat >> "$blocks/iap_readme" <<'EOF'
+- **A path that must skip sign-in** (a webhook, a cron call) needs an
+  `iap.bypass_paths` entry in the Terraform, an exemption in the gate, and its
+  own credential check.
+- **Opting out of IAP** (`exposure` public or none in TerraBloks) means no
+  `IAP_AUDIENCE`, so the gate 401s everything. Remove or replace it.
+EOF
+  fi
+
+  cat > "$blocks/iap_agents" <<EOF
+## Sign-in (Google IAP)
+
+$iap_lead
+
+The gate is in \`$gate_file\` and uses
+[\`cru-iap\`](https://github.com/CruGlobal/cru-iap). Every route but \`/up\`
+needs IAP's signed assertion, or else a 401. The README's
+[Sign-in section](./README.md#sign-in-google-iap) has the details. Rules:
+
+- **Never weaken the gate.** No boolean "auth off" flag, no fallback identity,
+  and no opening a path because the header is missing or \`IAP_AUDIENCE\` is
+  unset. For a local identity, \`CRU_IAP_DEV_BYPASS_EMAIL\` in
+  \`.env.development\`; never set it in deploy config.
+- **Identity is only the email.** The assertion carries no groups. "Who may get
+  in" is the Okta group bound in Terraform, not app code.
+- **Sign out** with \`/?gcp-iap-mode=CLEAR_LOGIN_COOKIE\`.
+EOF
+  if [ "$type" = "cloudrun" ]; then
+    cat >> "$blocks/iap_agents" <<'EOF'
+- **A path that skips sign-in needs both halves**: an `iap.bypass_paths` entry
+  in the Terraform (a TerraBloks / `cru-terraform` change) and an exemption in
+  the gate, plus its own credential check. Never read identity on it.
+EOF
+  fi
+
+  cat > "$blocks/iap_quickstart" <<EOF
+**Before you first run it locally,** open \`.env.development\` and replace
+\`replace-me@cru.org\` with your own email. Every route but \`/up\` needs a
+signed-in person, and locally that is you. The file stays out of the image.
+See [Sign-in (Google IAP)](./README.md#sign-in-google-iap).
+
+$iap_lead
+EOF
+fi
+
 echo "→ Filling in README.md, AGENTS.md and QUICK_START.md…"
 fill_block README.md STACK "$blocks/readme"
 fill_block AGENTS.md STACK "$blocks/agents"
@@ -531,6 +610,9 @@ fill_block README.md DATABASE "$blocks/db_readme"
 fill_block AGENTS.md DATABASE "$blocks/db_agents"
 fill_block QUICK_START.md DATABASE "$blocks/db_quickstart"
 fill_block AGENTS.md ERRORS "$blocks/errors"
+fill_block README.md IAP "$blocks/iap_readme"
+fill_block AGENTS.md IAP "$blocks/iap_agents"
+fill_block QUICK_START.md IAP "$blocks/iap_quickstart"
 
 # --- 6. Remove the scaffolding ----------------------------------------------
 

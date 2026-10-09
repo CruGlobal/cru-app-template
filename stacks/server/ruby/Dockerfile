@@ -5,8 +5,9 @@ FROM public.ecr.aws/docker/library/ruby:${RUBY_VERSION}-alpine
 # DataDog logs source
 LABEL com.datadoghq.ad.logs='[{"source": "ruby"}]'
 
-# build-base is needed to compile native gem extensions (e.g. puma).
-RUN apk upgrade --no-cache && apk --no-cache add build-base
+# build-base compiles native gem extensions (e.g. puma); git fetches gems
+# installed from GitHub (cru_iap).
+RUN apk upgrade --no-cache && apk --no-cache add build-base git
 
 WORKDIR /app
 

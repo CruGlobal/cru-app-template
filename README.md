@@ -41,6 +41,15 @@ database helper that ships with the `ecs` and `cloudrun` stacks in your language
 including how it logs in to Cloud SQL and which variables it reads.
 <!-- /CRU:DATABASE -->
 
+<!-- CRU:IAP -->
+## Sign-in (Google IAP)
+
+**No stack is activated yet.** After `bin/use-stack`, the `ecs` and `cloudrun`
+stacks fill this section in: their sign-in gate, how to run them locally as
+yourself, and how to sign out. Lambda apps have no gate, and the section goes
+away.
+<!-- /CRU:IAP -->
+
 ## Deploying
 
 Merging to `main` does not deploy. A nightly build produces a candidate image

@@ -64,12 +64,24 @@ jobs:
       - name: Python syntax
         run: python -m compileall -q stacks/server/python stacks/lambda/python
 
-      - name: Node stacks install & build
+      - name: Python server stack test
+        working-directory: stacks/server/python
+        run: |
+          pip install --quiet -r requirements.txt pytest
+          python -m pytest
+
+      - name: Ruby server stack test
+        working-directory: stacks/server/ruby
+        run: |
+          bundle install --quiet
+          bundle exec rake test
+
+      - name: Node stacks install, build & test
         run: |
           set -e
           for d in stacks/server/nodejs stacks/lambda/nodejs; do
             echo "::group::$d"
-            (cd "$d" && npm ci && npm run build)
+            (cd "$d" && npm ci && npm run build && npm test --if-present)
             echo "::endgroup::"
           done
 

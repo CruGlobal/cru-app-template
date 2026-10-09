@@ -24,6 +24,11 @@ Commit the result, then build your app on top of it. (See
 stack you chose and the Terraform module that provisions it.
 <!-- /CRU:STACK -->
 
+<!-- CRU:IAP -->
+**No stack is activated yet.** For the `ecs` and `cloudrun` stacks, this part
+then says how to sign in as yourself when you first run the app locally.
+<!-- /CRU:IAP -->
+
 ## 2. Provision the application (TerraBloks)
 
 All Cru cloud infrastructure is managed as code in the

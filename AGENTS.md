@@ -284,6 +284,15 @@ ruleset — that's configured via TerraBloks / `cru-terraform`, not in this repo
 Don't rename the `lint-and-build` job without updating the ruleset, or merges
 will block on a check that never reports.
 
+<!-- CRU:IAP -->
+## Sign-in (Google IAP)
+
+**No stack is activated yet.** After `bin/use-stack`, the `ecs` and `cloudrun`
+stacks fill this section in: their sign-in gate, the rules for changing it, and how to run them
+locally as yourself. Lambda apps have no gate, and the section goes
+away.
+<!-- /CRU:IAP -->
+
 ## Infrastructure & secrets
 
 - **Provisioning** (the runtime — ECS service, Cloud Run service, or Lambda
