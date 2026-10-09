@@ -559,9 +559,9 @@ EOF
   if [ "$type" = "cloudrun" ]; then
     cat >> "$blocks/iap_readme" <<'EOF'
 - **A path that must skip sign-in** (a webhook, a cron call) needs an
-  `iap.bypass_paths` entry in the Terraform (the default is `["/up"]`), an
-  exemption in the gate, and its own credential check.
-- **Opting out of IAP** (another Okta option in TerraBloks) means no
+  `iap.bypass_paths` entry in the Terraform, an exemption in the gate, and its
+  own credential check.
+- **Opting out of IAP** (`exposure` public or none in TerraBloks) means no
   `IAP_AUDIENCE`, so the gate 401s everything. Remove or replace it.
 EOF
   fi
