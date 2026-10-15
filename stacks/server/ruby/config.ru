@@ -11,6 +11,9 @@
 if ENV.fetch("RACK_ENV", "development") == "development" && File.exist?(".env.development")
   File.foreach(".env.development") do |line|
     key, sep, value = line.strip.partition("=")
+    key, value = key.strip, value.strip
+    # Like Node's --env-file, drop one pair of quotes around the value.
+    value = value[1..-2] if value.length >= 2 && %w[" '].include?(value[0]) && value[-1] == value[0]
     ENV[key] ||= value unless sep.empty? || key.start_with?("#")
   end
 end

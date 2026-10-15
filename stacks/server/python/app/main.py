@@ -57,13 +57,23 @@ def index():
     return f"Hello, {g.email} 👋", {"content-type": "text/plain; charset=utf-8"}
 
 
+def _load_dev_env(path):
+    """KEY=VALUE lines; variables already set win. Like Node's --env-file, it
+    drops one pair of quotes around a value."""
+    if not os.path.exists(path):
+        return
+    with open(path) as env_file:
+        for line in env_file:
+            key, sep, value = line.strip().partition("=")
+            key, value = key.strip(), value.strip()
+            if len(value) >= 2 and value[0] in "\"'" and value[-1] == value[0]:
+                value = value[1:-1]
+            if sep and not key.startswith("#"):
+                os.environ.setdefault(key, value)
+
+
 if __name__ == "__main__":
     # Local dev server; in the container gunicorn serves the app (see Dockerfile).
-    # Only this local run reads .env.development. Variables already set win.
-    if os.path.exists(".env.development"):
-        with open(".env.development") as env_file:
-            for line in env_file:
-                key, sep, value = line.strip().partition("=")
-                if sep and not key.startswith("#"):
-                    os.environ.setdefault(key, value)
+    # Only this local run reads .env.development.
+    _load_dev_env(".env.development")
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))

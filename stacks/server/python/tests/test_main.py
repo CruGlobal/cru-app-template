@@ -1,10 +1,11 @@
 import json
 import logging
+import os
 import sys
 
 import pytest
 
-from app.main import _JsonFormatter, app
+from app.main import _JsonFormatter, _load_dev_env, app
 
 
 @pytest.fixture
@@ -45,3 +46,17 @@ def test_log_lines_keep_the_traceback():
     message = json.loads(_JsonFormatter().format(record))["message"]
     assert message.startswith("failed\nTraceback")
     assert "ValueError: boom" in message
+
+
+def test_dev_env_drops_quotes(tmp_path, monkeypatch):
+    path = tmp_path / ".env.development"
+    path.write_text("# comment\nDEV_A=\"a@cru.org\"\nDEV_B='b@cru.org'\nDEV_C = c@cru.org\nDEV_D=\"d\n")
+    for key in ("DEV_A", "DEV_B", "DEV_C", "DEV_D"):
+        monkeypatch.delenv(key, raising=False)
+    _load_dev_env(str(path))
+    assert [os.environ[key] for key in ("DEV_A", "DEV_B", "DEV_C", "DEV_D")] == [
+        "a@cru.org",
+        "b@cru.org",
+        "c@cru.org",
+        '"d',
+    ]

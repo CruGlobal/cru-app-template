@@ -86,6 +86,7 @@ func run(log *slog.Logger) error {
 }
 
 // loadDevEnv reads KEY=VALUE lines for a local run; variables already set win.
+// Like Node's --env-file, it drops one pair of quotes around a value.
 func loadDevEnv(path string) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -93,10 +94,18 @@ func loadDevEnv(path string) {
 	}
 	for line := range strings.Lines(string(data)) {
 		key, value, ok := strings.Cut(strings.TrimSpace(line), "=")
+		key, value = strings.TrimSpace(key), unquote(strings.TrimSpace(value))
 		if _, set := os.LookupEnv(key); ok && !set && !strings.HasPrefix(key, "#") {
 			_ = os.Setenv(key, value)
 		}
 	}
+}
+
+func unquote(s string) string {
+	if len(s) >= 2 && (s[0] == '"' || s[0] == '\'') && s[len(s)-1] == s[0] {
+		return s[1 : len(s)-1]
+	}
+	return s
 }
 
 func routes() http.Handler {

@@ -3,6 +3,8 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -72,5 +74,26 @@ func TestIAPAudienceIgnoresTheDevBypass(t *testing.T) {
 	}
 	if rec := get(t, "/up"); rec.Code != http.StatusOK {
 		t.Errorf("GET /up = %d, want 200", rec.Code)
+	}
+}
+
+func TestLoadDevEnvDropsQuotes(t *testing.T) {
+	path := filepath.Join(t.TempDir(), ".env.development")
+	content := "# comment\nDEV_A=\"a@cru.org\"\nDEV_B='b@cru.org'\nDEV_C = c@cru.org\nDEV_D=\"d\n"
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"DEV_A", "DEV_B", "DEV_C", "DEV_D"} {
+		t.Setenv(key, "")
+		_ = os.Unsetenv(key)
+	}
+
+	loadDevEnv(path)
+
+	want := map[string]string{"DEV_A": "a@cru.org", "DEV_B": "b@cru.org", "DEV_C": "c@cru.org", "DEV_D": `"d`}
+	for key, value := range want {
+		if got := os.Getenv(key); got != value {
+			t.Errorf("%s = %q, want %q", key, got, value)
+		}
 	}
 }
