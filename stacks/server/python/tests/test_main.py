@@ -1,6 +1,10 @@
+import json
+import logging
+import sys
+
 import pytest
 
-from app.main import app
+from app.main import _JsonFormatter, app
 
 
 @pytest.fixture
@@ -31,3 +35,13 @@ def test_iap_audience_ignores_the_dev_bypass(client, monkeypatch):
     monkeypatch.setenv("CRU_IAP_DEV_BYPASS_EMAIL", "dev@example.com")
     assert client.get("/").status_code == 401
     assert client.get("/up").status_code == 200
+
+
+def test_log_lines_keep_the_traceback():
+    try:
+        raise ValueError("boom")
+    except ValueError:
+        record = logging.makeLogRecord({"levelname": "ERROR", "msg": "failed", "exc_info": sys.exc_info()})
+    message = json.loads(_JsonFormatter().format(record))["message"]
+    assert message.startswith("failed\nTraceback")
+    assert "ValueError: boom" in message

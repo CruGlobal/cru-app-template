@@ -14,7 +14,11 @@ class _JsonFormatter(logging.Formatter):
 
     def format(self, record):
         fields = getattr(record, "fields", {})
-        return json.dumps({"severity": record.levelname, "message": record.getMessage(), **fields})
+        message = record.getMessage()
+        # Unhandled errors carry exc_info; keep the traceback with the message.
+        if record.exc_info:
+            message += "\n" + self.formatException(record.exc_info)
+        return json.dumps({"severity": record.levelname, "message": message, **fields})
 
 
 _handler = logging.StreamHandler()
