@@ -89,9 +89,11 @@ must remove or replace the gate**. `/up` stays open because it is the health
 check, and the load balancer's `bypass_paths` sends it past IAP.
 
 Locally, `CRU_IAP_DEV_BYPASS_EMAIL` supplies the identity. Each stack ships
-`.env.development` with a `replace-me@cru.org` placeholder, read only by the
-local run command (`npm run dev`, `python -m app.main`, puma outside
-production, `go run`), and a `.dockerignore` that keeps it out of the image.
+`.env.development.example` with a `replace-me@cru.org` placeholder. Each dev
+copies it to `.env.development` (gitignored) and sets their own email; without
+that file, local requests get a 401. Only the local run command reads it
+(`npm run dev`, `python -m app.main`, puma outside production, `go run`), and
+`.dockerignore` keeps it out of the image.
 cru-iap also refuses the bypass when `IAP_AUDIENCE` is set or on Cloud Run.
 Ruby also strips `X-Forwarded-Host`, which Rack would otherwise trust for the
 host.

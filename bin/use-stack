@@ -549,11 +549,12 @@ The gate is in \`$gate_file\` and uses
 - Every route except the \`/up\` health check needs IAP's signed assertion.
   Anything else gets a 401 and an \`iap_rejected\` log line with the reason.
   \`/\` greets the signed-in email.
-- **Running locally:** \`.env.development\` sets
-  \`CRU_IAP_DEV_BYPASS_EMAIL=replace-me@cru.org\`. Replace it with your own
-  email, and \`$run_cmd\` signs every request in as you. cru-iap ignores it
-  when \`IAP_AUDIENCE\` is set or on Cloud Run, and \`.dockerignore\` keeps the
-  file out of the image.
+- **Running locally:** copy \`.env.development.example\` to
+  \`.env.development\` (gitignored) and set \`CRU_IAP_DEV_BYPASS_EMAIL\` to your
+  own email. \`$run_cmd\` then signs every request in as you. Without that
+  file, local requests get a 401. cru-iap ignores the setting when
+  \`IAP_AUDIENCE\` is set or on Cloud Run, and \`.dockerignore\` keeps the file
+  out of the image.
 - **Sign out** by linking to \`/?gcp-iap-mode=CLEAR_LOGIN_COOKIE\`.
 EOF
   if [ "$type" = "cloudrun" ]; then
@@ -579,7 +580,8 @@ needs IAP's signed assertion, or else a 401. The README's
 - **Never weaken the gate.** No boolean "auth off" flag, no fallback identity,
   and no opening a path because the header is missing or \`IAP_AUDIENCE\` is
   unset. For a local identity, \`CRU_IAP_DEV_BYPASS_EMAIL\` in
-  \`.env.development\`; never set it in deploy config.
+  \`.env.development\` (copied from \`.env.development.example\`, gitignored);
+  never set it in deploy config.
 - **Identity is only the email.** The assertion carries no groups. "Who may get
   in" is the Okta group bound in Terraform, not app code.
 - **Sign out** with \`/?gcp-iap-mode=CLEAR_LOGIN_COOKIE\`.
@@ -593,9 +595,11 @@ EOF
   fi
 
   cat > "$blocks/iap_quickstart" <<EOF
-**Before you first run it locally,** open \`.env.development\` and replace
-\`replace-me@cru.org\` with your own email. Every route but \`/up\` needs a
-signed-in person, and locally that is you. The file stays out of the image.
+**Before you first run it locally,** copy \`.env.development.example\` to
+\`.env.development\` and replace \`replace-me@cru.org\` with your own email.
+Every route but \`/up\` needs a signed-in person, and locally that is you.
+Without the file, local requests get a 401. It is gitignored and stays out of
+the image.
 See [Sign-in (Google IAP)](./README.md#sign-in-google-iap).
 
 $iap_lead
