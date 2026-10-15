@@ -10,8 +10,7 @@ import (
 
 type emailKey struct{}
 
-// requireIAP is the IAP sign-in gate: 401 for all but /up. ECS has no IAP in front,
-// so an ECS app must remove or replace it.
+// requireIAP is the IAP sign-in gate: 401 for all but /up.
 func requireIAP(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// /up is the health probe: it calls the container directly, with no IAP assertion.

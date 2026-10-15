@@ -6,7 +6,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -118,10 +117,18 @@ func routes() http.Handler {
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
 
+	// CRU:IAP
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		_, _ = fmt.Fprintf(w, "Hello, %s 👋\n", signedInEmail(r))
+		_, _ = w.Write([]byte("Hello, " + signedInEmail(r) + " 👋\n"))
 	})
 
 	return requireIAP(mux)
+	// /CRU:IAP
+	// CRU:ECS mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, _ *http.Request) {
+	// CRU:ECS 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	// CRU:ECS 	_, _ = w.Write([]byte("Hello 👋\n"))
+	// CRU:ECS })
+	// CRU:ECS
+	// CRU:ECS return mux
 }

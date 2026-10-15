@@ -287,10 +287,10 @@ will block on a check that never reports.
 <!-- CRU:IAP -->
 ## Sign-in (Google IAP)
 
-**No stack is activated yet.** After `bin/use-stack`, the `ecs` and `cloudrun`
-stacks fill this section in: their sign-in gate, the rules for changing it, and how to run them
-locally as yourself. Lambda apps have no gate, and the section goes
-away.
+**No stack is activated yet.** After `bin/use-stack`, the `cloudrun` stacks
+fill this section in: their sign-in gate, the rules for changing it, and how to
+run them locally as yourself. ECS and Lambda apps have no IAP in front and no
+gate, and the section goes away.
 <!-- /CRU:IAP -->
 
 ## Infrastructure & secrets

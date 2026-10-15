@@ -9,9 +9,11 @@ import (
 )
 
 func TestRoutes(t *testing.T) {
+	// CRU:IAP
 	t.Setenv("IAP_AUDIENCE", "")
 	t.Setenv("CRU_IAP_DEV_BYPASS_EMAIL", "dev@example.com")
 
+	// /CRU:IAP
 	tests := []struct {
 		path string
 		want int
@@ -35,6 +37,7 @@ func get(t *testing.T, path string) *httptest.ResponseRecorder {
 	return rec
 }
 
+// CRU:IAP
 func TestUpIsAlwaysOpen(t *testing.T) {
 	t.Setenv("IAP_AUDIENCE", "")
 	t.Setenv("CRU_IAP_DEV_BYPASS_EMAIL", "")
@@ -77,6 +80,7 @@ func TestIAPAudienceIgnoresTheDevBypass(t *testing.T) {
 	}
 }
 
+// /CRU:IAP
 func TestLoadDevEnvDropsQuotes(t *testing.T) {
 	path := filepath.Join(t.TempDir(), ".env.development")
 	content := "# comment\nDEV_A=\"a@cru.org\"\nDEV_B='b@cru.org'\nDEV_C = c@cru.org\nDEV_D=\"d\n"

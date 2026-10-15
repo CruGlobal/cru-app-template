@@ -5,6 +5,7 @@ require "rack/mock_request"
 class AppTest < Minitest::Test
   APP = Rack::Builder.parse_file(File.expand_path("../config.ru", __dir__))
 
+  # CRU:IAP
   def setup
     @saved = ENV.to_h.slice("IAP_AUDIENCE", "CRU_IAP_DEV_BYPASS_EMAIL")
     ENV.delete("IAP_AUDIENCE")
@@ -16,6 +17,7 @@ class AppTest < Minitest::Test
     ENV.delete("CRU_IAP_DEV_BYPASS_EMAIL")
     ENV.update(@saved)
   end
+  # /CRU:IAP
 
   def get(path) = Rack::MockRequest.new(APP).get(path)
 
@@ -23,6 +25,7 @@ class AppTest < Minitest::Test
     assert_equal 200, get("/up").status
   end
 
+  # CRU:IAP
   def test_everything_else_needs_an_assertion_or_the_dev_bypass
     assert_equal 401, get("/").status
     assert_equal 401, get("/nope").status
@@ -41,4 +44,11 @@ class AppTest < Minitest::Test
     assert_equal 401, get("/").status
     assert_equal 200, get("/up").status
   end
+  # /CRU:IAP
+  # CRU:ECS
+  # CRU:ECS def test_index_says_hello
+  # CRU:ECS   response = get("/")
+  # CRU:ECS   assert_equal 200, response.status
+  # CRU:ECS   assert_equal "Hello 👋", response.body
+  # CRU:ECS end
 end

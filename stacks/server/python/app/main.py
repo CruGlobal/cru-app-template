@@ -5,8 +5,11 @@ import json
 import logging
 import os
 
+# CRU:IAP
 from cru_iap import dev_bypass, verify_request
 from flask import Flask, g, request
+# /CRU:IAP
+# CRU:ECS from flask import Flask
 
 
 class _JsonFormatter(logging.Formatter):
@@ -29,8 +32,8 @@ log = logging.getLogger(__name__)
 app = Flask(__name__)
 
 
-# IAP sign-in gate: 401 for all but /up. ECS has no IAP in front, so an ECS app
-# must remove or replace it.
+# CRU:IAP
+# IAP sign-in gate: 401 for all but /up.
 @app.before_request
 def require_iap():
     # /up is the health probe: it calls the container directly, with no IAP assertion.
@@ -43,6 +46,7 @@ def require_iap():
         return "Unauthorized", 401
     g.email = result.email
     return None
+# /CRU:IAP
 
 
 # Health check — the platform pings this to know the app is alive. Keep a 200
@@ -54,7 +58,10 @@ def health():
 
 @app.get("/")
 def index():
+    # CRU:IAP
     return f"Hello, {g.email} 👋", {"content-type": "text/plain; charset=utf-8"}
+    # /CRU:IAP
+    # CRU:ECS return "Hello 👋", {"content-type": "text/plain; charset=utf-8"}
 
 
 def _load_dev_env(path):

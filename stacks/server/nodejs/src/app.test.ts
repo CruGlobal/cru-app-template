@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
+// CRU:IAP
 import { after, before, beforeEach, test } from "node:test";
+// /CRU:IAP
+// CRU:ECS import { after, before, test } from "node:test";
 import { handler } from "./app.ts";
 
 const server = createServer((req, res) => void handler(req, res));
@@ -11,15 +14,18 @@ before(async () => {
   base = `http://localhost:${(server.address() as AddressInfo).port}`;
 });
 after(() => server.close());
+// CRU:IAP
 beforeEach(() => {
   delete process.env.IAP_AUDIENCE;
   delete process.env.CRU_IAP_DEV_BYPASS_EMAIL;
 });
+// /CRU:IAP
 
 test("/up is always open", async () => {
   assert.equal((await fetch(`${base}/up`)).status, 200);
 });
 
+// CRU:IAP
 test("without an assertion or the dev bypass, everything else is a 401", async () => {
   assert.equal((await fetch(`${base}/`)).status, 401);
   assert.equal((await fetch(`${base}/nope`)).status, 401);
@@ -38,3 +44,10 @@ test("with IAP_AUDIENCE the dev bypass is ignored", async () => {
   assert.equal((await fetch(`${base}/`)).status, 401);
   assert.equal((await fetch(`${base}/up`)).status, 200);
 });
+// /CRU:IAP
+// CRU:ECS
+// CRU:ECS test("/ says hello", async () => {
+// CRU:ECS   const res = await fetch(`${base}/`);
+// CRU:ECS   assert.equal(res.status, 200);
+// CRU:ECS   assert.equal(await res.text(), "Hello 👋");
+// CRU:ECS });

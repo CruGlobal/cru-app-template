@@ -44,10 +44,10 @@ including how it logs in to Cloud SQL and which variables it reads.
 <!-- CRU:IAP -->
 ## Sign-in (Google IAP)
 
-**No stack is activated yet.** After `bin/use-stack`, the `ecs` and `cloudrun`
-stacks fill this section in: their sign-in gate, how to run them locally as
-yourself, and how to sign out. Lambda apps have no gate, and the section goes
-away.
+**No stack is activated yet.** After `bin/use-stack`, the `cloudrun` stacks
+fill this section in: their sign-in gate, how to run them locally as yourself,
+and how to sign out. ECS and Lambda apps have no IAP in front and no gate, and
+the section goes away.
 <!-- /CRU:IAP -->
 
 ## Deploying

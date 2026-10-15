@@ -168,12 +168,28 @@ jobs:
                    "$work/.github/dependabot.yml"; then
                 echo "::error::$type/$lang — generated YAML does not parse"; fail=1
               fi
-              # The module path is filled in at activation, so prove the
-              # activated Go app still builds and passes its tests.
-              if [ "$lang" = go ] && ! (cd "$work" && go build ./... && go test ./...) > "$work.go.log" 2>&1; then
-                echo "::error::$type/$lang: the activated Go app does not build"
-                cat "$work.go.log"
-                fail=1
+              # Activation rewrites server code (the IAP gate, the Go module
+              # path), so prove each activated server app builds and passes
+              # its own tests.
+              if [ "$type" != lambda ]; then
+                case "$lang" in
+                  nodejs) check='npm ci && npm run build && npm test' ;;
+                  python) check='pip install --quiet -r requirements.txt pytest && python -m pytest -q' ;;
+                  ruby)   check='bundle install --quiet && bundle exec rake test' ;;
+                  go)     check='go mod tidy -diff && test -z "$(gofmt -l .)" && go build ./... && go test ./...' ;;
+                esac
+                if ! (cd "$work" && sh -c "$check") > "$work.test.log" 2>&1; then
+                  echo "::error::$type/$lang: the activated app does not build or pass its tests"
+                  cat "$work.test.log"
+                  fail=1
+                fi
+              fi
+              if grep -rnE '^[[:space:]]*(//|#) /?CRU:(IAP|ECS)' "$work" --exclude-dir=node_modules; then
+                echo "::error::$type/$lang: a CRU:IAP / CRU:ECS marker survived activation"; fail=1
+              fi
+              # ECS has no IAP in front: no gate, no dependency, no dev bypass.
+              if [ "$type" = ecs ] && grep -rniE 'cru[-_]?iap' "$work" --exclude-dir=node_modules; then
+                echo "::error::$type/$lang: the IAP gate survived activation"; fail=1
               fi
 
               echo "✓ $type/$lang"

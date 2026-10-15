@@ -1,7 +1,10 @@
 // Minimal Cru app — a plain Node HTTP server with a health check, so the
 // container builds and deploys as-is. Grow it into whatever you need (add a
-// framework like Express or Fastify, routes, a database, etc.). The routes,
-// and the IAP sign-in gate, are in app.ts.
+// framework like Express or Fastify, routes, a database, etc.). The routes are
+// in app.ts.
+// CRU:IAP
+// So is the IAP sign-in gate.
+// /CRU:IAP
 import { createServer } from "node:http";
 import { handler } from "./app.ts";
 

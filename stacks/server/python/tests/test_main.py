@@ -10,8 +10,10 @@ from app.main import _JsonFormatter, _load_dev_env, app
 
 @pytest.fixture
 def client(monkeypatch):
+    # CRU:IAP
     monkeypatch.delenv("IAP_AUDIENCE", raising=False)
     monkeypatch.delenv("CRU_IAP_DEV_BYPASS_EMAIL", raising=False)
+    # /CRU:IAP
     return app.test_client()
 
 
@@ -19,6 +21,7 @@ def test_up_is_always_open(client):
     assert client.get("/up").status_code == 200
 
 
+# CRU:IAP
 def test_everything_else_needs_an_assertion_or_the_dev_bypass(client):
     assert client.get("/").status_code == 401
     assert client.get("/nope").status_code == 401
@@ -36,6 +39,13 @@ def test_iap_audience_ignores_the_dev_bypass(client, monkeypatch):
     monkeypatch.setenv("CRU_IAP_DEV_BYPASS_EMAIL", "dev@example.com")
     assert client.get("/").status_code == 401
     assert client.get("/up").status_code == 200
+# /CRU:IAP
+# CRU:ECS
+# CRU:ECS
+# CRU:ECS def test_index_says_hello(client):
+# CRU:ECS     response = client.get("/")
+# CRU:ECS     assert response.status_code == 200
+# CRU:ECS     assert response.text == "Hello 👋"
 
 
 def test_log_lines_keep_the_traceback():

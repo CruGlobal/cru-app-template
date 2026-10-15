@@ -174,6 +174,68 @@ substitute() {
 substitute .github/workflows/pipeline-v2.yml package.json Dockerfile build.sh go.mod
 chmod +x build.sh
 
+# --- 2b. The IAP sign-in gate ------------------------------------------------
+
+# Only Cloud Run has IAP in front. On ECS the gate would 401 every request, and
+# cru-iap can't tell ECS from a laptop, so its dev bypass would stay on. Strip it.
+#
+# In the server stacks, lines between `// CRU:IAP` and `// /CRU:IAP` (or `#`)
+# are the gate; a `// CRU:ECS ` line is its ECS replacement, commented out.
+# Cloud Run keeps the gate and drops the ECS lines; ECS does the opposite. When
+# a block goes, so do as many following blank lines as preceded it.
+strip_iap() {
+  local f ecs=0
+  [ "$type" = "ecs" ] && ecs=1
+  { grep -rlE --exclude-dir=node_modules '^[[:space:]]*(//|#) /?CRU:(IAP|ECS)' "$stack" || true; } |
+  while IFS= read -r f; do
+    f="${f#"$stack"/}"
+    awk -v ecs="$ecs" '
+      /^[ \t]*(\/\/|#) CRU:IAP$/   { skip = ecs; next }
+      /^[ \t]*(\/\/|#) \/CRU:IAP$/ { if (skip) eat = blanks; skip = 0; next }
+      skip { next }
+      /^[ \t]*(\/\/|#) CRU:ECS( |$)/ {
+        if (!ecs) next
+        sub(/(\/\/|#) CRU:ECS ?/, "")
+        if ($0 ~ /^[ \t]*$/) $0 = ""
+      }
+      $0 == "" { if (eat > 0) { eat--; next } blanks++; print; next }
+      { eat = 0; blanks = 0; print }
+    ' "$f" > "$f.use-stack.tmp"
+    mv "$f.use-stack.tmp" "$f"
+  done
+}
+
+if [ "$family" = "server" ]; then
+  strip_iap
+  if [ "$type" = "ecs" ]; then
+    echo "→ Removing the IAP sign-in gate (ECS has no IAP in front)…"
+    rm -f .env.development.example cmd/server/iap.go
+    # The dependency, in whichever manifest this language has. The Gemfile's
+    # line is a CRU:IAP block, so strip_iap already took it.
+    case "$lang" in
+      nodejs)
+        grep -v '"@cruglobal/cru-iap"' package.json > package.json.use-stack.tmp
+        mv package.json.use-stack.tmp package.json
+        # cru-iap is the only package that needs jose.
+        awk '
+          /^    "node_modules\/(@cruglobal\/cru-iap|jose)": \{$/ { skip = 1; next }
+          skip { if ($0 ~ /^    \},?$/) skip = 0; next }
+          /^        "@cruglobal\/cru-iap": / { next }
+          { print }
+        ' package-lock.json > package-lock.json.use-stack.tmp
+        mv package-lock.json.use-stack.tmp package-lock.json ;;
+      python)
+        grep -v '^cru-iap==' requirements.txt > requirements.txt.use-stack.tmp
+        mv requirements.txt.use-stack.tmp requirements.txt ;;
+      go)
+        for f in go.mod go.sum; do
+          grep -v 'github.com/CruGlobal/cru-iap ' "$f" > "$f.use-stack.tmp"
+          mv "$f.use-stack.tmp" "$f"
+        done ;;
+    esac
+  fi
+fi
+
 # `go build ./cmd/server` leaves a binary named server at the root. Ignore it
 # in Go apps only: in another language, server/ may well be source.
 if [ "$lang" = "go" ]; then
@@ -523,20 +585,13 @@ fi
 # differently.
 cp "stacks/docs/errors-$family-$lang.md" "$blocks/errors"
 
-# The IAP gate ships in server stacks only; ECS has no IAP in front, so its docs
-# say to remove the gate. Lambda has no gate, so its blocks are emptied.
+# Only Cloud Run keeps the IAP gate (step 2b), so ECS and Lambda get these
+# blocks emptied.
 : > "$blocks/iap_readme"; : > "$blocks/iap_agents"; : > "$blocks/iap_quickstart"
-if [ "$family" = "server" ]; then
-  if [ "$type" = "cloudrun" ]; then
-    iap_lead='TerraBloks puts **Google Identity-Aware Proxy** in front of new Cloud Run
+if [ "$type" = "cloudrun" ]; then
+  iap_lead='TerraBloks puts **Google Identity-Aware Proxy** in front of new Cloud Run
 apps by default: people sign in with Okta at the load balancer, before a request
 reaches the app, and the platform sets `IAP_AUDIENCE`.'
-  else
-    iap_lead='**This is an ECS app, and ECS has no IAP in front of it.** The starter still
-ships the sign-in gate, so once deployed every route but `/up` answers 401.
-Remove the gate, or replace it with the sign-in the app needs, before you rely
-on a deploy.'
-  fi
 
   cat > "$blocks/iap_readme" <<EOF
 ## Sign-in (Google IAP)
@@ -556,16 +611,12 @@ The gate is in \`$gate_file\` and uses
   \`IAP_AUDIENCE\` is set or on Cloud Run, and \`.dockerignore\` keeps the file
   out of the image.
 - **Sign out** by linking to \`/?gcp-iap-mode=CLEAR_LOGIN_COOKIE\`.
-EOF
-  if [ "$type" = "cloudrun" ]; then
-    cat >> "$blocks/iap_readme" <<'EOF'
 - **A path that must skip sign-in** (a webhook, a cron call) needs an
-  `iap.bypass_paths` entry in the Terraform, an exemption in the gate, and its
+  \`iap.bypass_paths\` entry in the Terraform, an exemption in the gate, and its
   own credential check.
-- **Opting out of IAP** (`exposure` public or none in TerraBloks) means no
-  `IAP_AUDIENCE`, so the gate 401s everything. Remove or replace it.
+- **Opting out of IAP** (\`exposure\` public or none in TerraBloks) means no
+  \`IAP_AUDIENCE\`, so the gate 401s everything. Remove or replace it.
 EOF
-  fi
 
   cat > "$blocks/iap_agents" <<EOF
 ## Sign-in (Google IAP)
@@ -585,14 +636,10 @@ needs IAP's signed assertion, or else a 401. The README's
 - **Identity is only the email.** The assertion carries no groups. "Who may get
   in" is the Okta group bound in Terraform, not app code.
 - **Sign out** with \`/?gcp-iap-mode=CLEAR_LOGIN_COOKIE\`.
-EOF
-  if [ "$type" = "cloudrun" ]; then
-    cat >> "$blocks/iap_agents" <<'EOF'
-- **A path that skips sign-in needs both halves**: an `iap.bypass_paths` entry
-  in the Terraform (a TerraBloks / `cru-terraform` change) and an exemption in
+- **A path that skips sign-in needs both halves**: an \`iap.bypass_paths\` entry
+  in the Terraform (a TerraBloks / \`cru-terraform\` change) and an exemption in
   the gate, plus its own credential check. Never read identity on it.
 EOF
-  fi
 
   cat > "$blocks/iap_quickstart" <<EOF
 **Before you first run it locally,** copy \`.env.development.example\` to
