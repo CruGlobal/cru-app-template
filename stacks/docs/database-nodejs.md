@@ -2,7 +2,7 @@
 [`pg`](https://node-postgres.com) pool.
 
 Nothing connects at startup. The app only talks to the database when your code
-calls the helper, so an app with no database is unaffected and `/health` keeps
+calls the helper, so an app with no database is unaffected and `/up` keeps
 working.
 
 ```ts

@@ -3,6 +3,7 @@ module __CRU_GO_MODULE__
 go 1.27.1
 
 require (
+	github.com/CruGlobal/cru-iap v0.2.1
 	github.com/jackc/pgx/v5 v5.11.0
 	golang.org/x/oauth2 v0.37.0
 )

@@ -2,7 +2,7 @@
 [`pgx`](https://github.com/jackc/pgx) connection pool.
 
 Nothing connects at startup. The pool opens connections only when your code runs
-a query, so an app with no database is unaffected and `/health` keeps working.
+a query, so an app with no database is unaffected and `/up` keeps working.
 
 ```go
 // Import it as "<module>/internal/db", where <module> is the path after

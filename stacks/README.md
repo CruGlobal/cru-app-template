@@ -78,6 +78,39 @@ Its docs live in `stacks/docs/database-<language>.md`. `bin/use-stack` copies th
 one for the chosen language into the `CRU:DATABASE` blocks of README.md,
 AGENTS.md and QUICK_START.md. Change the helper and its fragment together.
 
+## The IAP sign-in gate (server stacks only)
+
+Each server stack checks Google IAP's signed assertion with
+[`cru-iap`](https://github.com/CruGlobal/cru-iap) (`src/app.ts`, `app/main.py`,
+`lib/app.rb` or `cmd/server/iap.go`). Every route but `/up` needs a verified
+assertion, else 401 with an `iap_rejected` log line. It fails closed in every
+environment, even with `IAP_AUDIENCE` unset. `/up` stays open because it is the
+health check, and the probe calls the container directly, not through IAP.
+
+The gate is for Cloud Run only. ECS has no IAP in front, so there it would 401
+everything, and cru-iap would keep the dev bypass on (it turns that off only
+when it sees `IAP_AUDIENCE` or Cloud Run). So `bin/use-stack` strips it for ECS:
+lines between `// CRU:IAP` and `// /CRU:IAP` (or `#`) are the gate, and a
+`// CRU:ECS ` line is its ECS replacement, commented out. Cloud Run keeps the
+gate and drops the ECS lines; ECS does the opposite, and also loses `cru-iap`
+from its manifest, `cmd/server/iap.go` and `.env.development.example`. Keep
+the markers whole-line, and keep both versions building: CI activates every
+combo and runs its tests.
+
+Locally, `CRU_IAP_DEV_BYPASS_EMAIL` supplies the identity. Each stack ships
+`.env.development.example` with a `replace-me@cru.org` placeholder. Each dev
+copies it to `.env.development` (gitignored) and sets their own email; without
+that file, local requests get a 401. Only the local run command reads it
+(`npm run dev`, `python -m app.main`, puma outside production, `go run`), and
+`.dockerignore` keeps it out of the image.
+cru-iap also refuses the bypass when `IAP_AUDIENCE` is set or on Cloud Run.
+Ruby also strips `X-Forwarded-Host`, which Rack would otherwise trust for the
+host.
+
+`bin/use-stack` fills the `CRU:IAP` blocks of README.md, AGENTS.md and
+QUICK_START.md for Cloud Run and empties them for ECS and Lambda, which have no
+gate.
+
 ## Error reporting examples
 
 Every stack, server and Lambda, has an example of reporting errors to Flightdeck

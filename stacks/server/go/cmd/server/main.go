@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -23,6 +24,7 @@ func main() {
 	// JSON lines on stdout, which Datadog parses into fields.
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(log)
+	loadDevEnv(".env.development")
 
 	if err := run(log); err != nil {
 		log.Error("server stopped", "error", err)
@@ -82,22 +84,51 @@ func run(log *slog.Logger) error {
 	return nil
 }
 
+// loadDevEnv reads KEY=VALUE lines for a local run; variables already set win.
+// Like Node's --env-file, it drops one pair of quotes around a value.
+func loadDevEnv(path string) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return
+	}
+	for line := range strings.Lines(string(data)) {
+		key, value, ok := strings.Cut(strings.TrimSpace(line), "=")
+		key, value = strings.TrimSpace(key), unquote(strings.TrimSpace(value))
+		if _, set := os.LookupEnv(key); ok && !set && !strings.HasPrefix(key, "#") {
+			_ = os.Setenv(key, value)
+		}
+	}
+}
+
+func unquote(s string) string {
+	if len(s) >= 2 && (s[0] == '"' || s[0] == '\'') && s[len(s)-1] == s[0] {
+		return s[1 : len(s)-1]
+	}
+	return s
+}
+
 func routes() http.Handler {
 	mux := http.NewServeMux()
 
 	// Health check: the platform calls this to know the app is alive. Keep a 200
 	// here working, or deploys are marked unhealthy.
-	health := func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("GET /up", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
-	}
-	mux.HandleFunc("GET /health", health)
-	mux.HandleFunc("GET /up", health)
-
-	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		_, _ = w.Write([]byte("Hello from your Cru app 👋\n"))
 	})
 
-	return mux
+	// CRU:IAP
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		_, _ = w.Write([]byte("Hello, " + signedInEmail(r) + " 👋\n"))
+	})
+
+	return requireIAP(mux)
+	// /CRU:IAP
+	// CRU:ECS mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, _ *http.Request) {
+	// CRU:ECS 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	// CRU:ECS 	_, _ = w.Write([]byte("Hello 👋\n"))
+	// CRU:ECS })
+	// CRU:ECS
+	// CRU:ECS return mux
 }

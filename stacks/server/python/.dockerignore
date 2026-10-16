@@ -1,0 +1,5 @@
+# CRU:IAP
+# Keeps .env.development out of the image: its dev identity would sign anyone in without IAP.
+# /CRU:IAP
+# CRU:ECS # Keeps local env files such as .env.development out of the image.
+.env*

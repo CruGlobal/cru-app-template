@@ -1,16 +1,56 @@
 """Minimal Cru app — a tiny Flask app with a health check, so the container
 builds and deploys as-is. Grow it into whatever you need (add routes, a
 database, background jobs, etc.)."""
+import json
+import logging
 import os
 
-from flask import Flask
+# CRU:IAP
+from cru_iap import dev_bypass, verify_request
+from flask import Flask, g, request
+# /CRU:IAP
+# CRU:ECS from flask import Flask
+
+
+class _JsonFormatter(logging.Formatter):
+    """One JSON line per event; Cloud Run and Datadog read `severity`."""
+
+    def format(self, record):
+        fields = getattr(record, "fields", {})
+        message = record.getMessage()
+        # Unhandled errors carry exc_info; keep the traceback with the message.
+        if record.exc_info:
+            message += "\n" + self.formatException(record.exc_info)
+        return json.dumps({"severity": record.levelname, "message": message, **fields})
+
+
+_handler = logging.StreamHandler()
+_handler.setFormatter(_JsonFormatter())
+logging.basicConfig(level=logging.INFO, handlers=[_handler])
+log = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
 
+# CRU:IAP
+# IAP sign-in gate: 401 for all but /up.
+@app.before_request
+def require_iap():
+    # /up is the health probe: it calls the container directly, with no IAP assertion.
+    if request.path == "/up":
+        return None
+
+    result = dev_bypass() or verify_request(request)
+    if not result.ok:
+        log.warning("iap_rejected", extra={"fields": {"reason": result.reason, "path": request.path}})
+        return "Unauthorized", 401
+    g.email = result.email
+    return None
+# /CRU:IAP
+
+
 # Health check — the platform pings this to know the app is alive. Keep a 200
 # here working or deploys will be marked unhealthy.
-@app.get("/health")
 @app.get("/up")
 def health():
     return {"status": "ok"}
@@ -18,9 +58,29 @@ def health():
 
 @app.get("/")
 def index():
-    return "Hello from your Cru app 👋"
+    # CRU:IAP
+    return f"Hello, {g.email} 👋", {"content-type": "text/plain; charset=utf-8"}
+    # /CRU:IAP
+    # CRU:ECS return "Hello 👋", {"content-type": "text/plain; charset=utf-8"}
+
+
+def _load_dev_env(path):
+    """KEY=VALUE lines; variables already set win. Like Node's --env-file, it
+    drops one pair of quotes around a value."""
+    if not os.path.exists(path):
+        return
+    with open(path) as env_file:
+        for line in env_file:
+            key, sep, value = line.strip().partition("=")
+            key, value = key.strip(), value.strip()
+            if len(value) >= 2 and value[0] in "\"'" and value[-1] == value[0]:
+                value = value[1:-1]
+            if sep and not key.startswith("#"):
+                os.environ.setdefault(key, value)
 
 
 if __name__ == "__main__":
     # Local dev server; in the container gunicorn serves the app (see Dockerfile).
+    # Only this local run reads .env.development.
+    _load_dev_env(".env.development")
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))

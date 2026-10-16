@@ -4,6 +4,7 @@
 # Secrets & local env — NEVER commit these (the platform injects secrets)
 .env
 .env*.local
+.env.development
 *.pem
 
 # OS / editor
