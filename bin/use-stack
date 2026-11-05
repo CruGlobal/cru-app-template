@@ -26,7 +26,7 @@ Usage: bin/use-stack <type> <language>
 
   type      ecs | cloudrun | lambda
   language  go | nodejs | ruby | python   (lambda: go or nodejs)
-            Go is the default. Pick nodejs (TypeScript) for a browser front
+            Go is recommended. Pick nodejs (TypeScript) for a browser front
             end, or for a library that only Node has.
 
 Examples:
@@ -89,6 +89,13 @@ esac
 if [ "$family" = "lambda" ] && { [ "$lang" = "ruby" ] || [ "$lang" = "python" ]; }; then
   echo "Error: there is no $lang stack for lambda. Pick go (recommended) or nodejs." >&2
   exit 1
+fi
+
+# The Go Lambda builds with the lambda.norpc tag (see its Dockerfile), so its CI
+# builds and tests with it too.
+go_tags=""
+if [ "$family" = "lambda" ] && [ "$lang" = "go" ]; then
+  go_tags="-tags lambda.norpc "
 fi
 
 # Go names its module after the repository, the way `go mod init` would in a
@@ -406,11 +413,13 @@ YAML
         with:
           version: ${{ steps.lintver.outputs.version }}
       - name: Build
-        run: go build ./...
+        run: go build __CRU_GO_TAGS__./...
       - name: Test
-        run: go test -race ./...
+        run: go test __CRU_GO_TAGS__-race ./...
 YAML
     } > .github/workflows/ci.yml
+    sed -e "s|__CRU_GO_TAGS__|$go_tags|g" .github/workflows/ci.yml > .github/workflows/ci.yml.use-stack.tmp
+    mv .github/workflows/ci.yml.use-stack.tmp .github/workflows/ci.yml
     ;;
 esac
 
@@ -519,10 +528,12 @@ EOF
 if [ "$lang" = "go" ]; then
   cat >> "$blocks/agents" <<'EOF'
 
-Before you push, run `golangci-lint run` and `go test -race ./...`. CI runs both,
+Before you push, run `golangci-lint run` and `go test __CRU_GO_TAGS__-race ./...`. CI runs both,
 at the versions pinned in `.tool-versions`. Keep new packages under `internal/`
 and new programs under `cmd/<name>/`.
 EOF
+  sed -e "s|__CRU_GO_TAGS__|$go_tags|g" "$blocks/agents" > "$blocks/agents.tmp"
+  mv "$blocks/agents.tmp" "$blocks/agents"
 fi
 
 # A Go function runs on Lambda's OS-only runtime, which has no exec wrapper, so

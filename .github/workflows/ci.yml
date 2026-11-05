@@ -87,6 +87,11 @@ jobs:
             echo "::endgroup::"
           done
 
+      # One Go and golangci-lint version for both Go stacks, so an app's
+      # toolchain doesn't depend on which type it picked.
+      - name: The Go stacks pin the same versions
+        run: diff stacks/server/go/.tool-versions stacks/lambda/go/.tool-versions
+
       - name: Read the Go stacks' golangci-lint versions
         id: lintver
         run: |
@@ -106,6 +111,8 @@ jobs:
           go build ./...
           go test -race ./...
 
+      # The Lambda image builds with -tags lambda.norpc, so build, test and lint
+      # that code (the stack's .golangci.yml sets the tag for the linter).
       - name: Go Lambda stack lint
         uses: golangci/golangci-lint-action@v9
         with:
@@ -116,8 +123,8 @@ jobs:
         working-directory: stacks/lambda/go
         run: |
           go mod tidy -diff
-          go build ./...
-          go test -race ./...
+          go build -tags lambda.norpc ./...
+          go test -tags lambda.norpc -race ./...
 
       # The real check: activate every combo in a throwaway copy and assert the
       # script left the repo in the shape an app expects.
@@ -193,7 +200,8 @@ jobs:
                   nodejs) check='npm ci && npm run build && npm test' ;;
                   python) check='pip install --quiet -r requirements.txt pytest && python -m pytest -q' ;;
                   ruby)   check='bundle install --quiet && bundle exec rake test' ;;
-                  go)     check='go mod tidy -diff && test -z "$(gofmt -l .)" && go build ./... && go test ./...' ;;
+                  go)     tags=""; [ "$type" = lambda ] && tags="-tags lambda.norpc"
+                          check="go mod tidy -diff && test -z \"\$(gofmt -l .)\" && go build $tags ./... && go test $tags ./..." ;;
                 esac
                 if ! (cd "$work" && sh -c "$check") > "$work.test.log" 2>&1; then
                   echo "::error::$type/$lang: the activated app does not build or pass its tests"

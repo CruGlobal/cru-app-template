@@ -10,5 +10,5 @@
 
 docker buildx build $DOCKER_ARGS \
   --platform linux/amd64 \
-  --build-arg GO_VERSION=$(awk '$1 == "golang" { print $2 }' .tool-versions) \
+  --build-arg GO_VERSION="$(awk '$1 == "golang" { print $2 }' .tool-versions)" \
   .

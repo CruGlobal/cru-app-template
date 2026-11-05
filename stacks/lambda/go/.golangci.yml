@@ -4,6 +4,11 @@
 # catch a few more real bugs without arguing about style.
 version: "2"
 
+# The image builds with the lambda.norpc tag, so lint the same code.
+run:
+  build-tags:
+    - lambda.norpc
+
 linters:
   enable:
     - misspell # common misspellings in comments and strings

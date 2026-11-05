@@ -22,8 +22,10 @@ ARG TARGETARCH
 RUN GOOS=$TARGETOS GOARCH=$TARGETARCH \
     go build -tags lambda.norpc -trimpath -ldflags="-s -w" -o /out/bootstrap ./cmd/handler
 
-# Download and extract the secrets-lambda-extension
-FROM public.ecr.aws/docker/library/alpine:latest AS extension
+# Download and extract the secrets-lambda-extension. This stage only downloads
+# files, so it runs on the build machine's own platform. The tarball is the
+# linux-amd64 build, which matches the image build.sh asks for.
+FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/alpine:latest AS extension
 # Deliberately tracks the LATEST extension release (pinned versions rotted in
 # Dockerfiles fleet-wide; under build-once the artifact itself is the pin and a
 # bad release is caught on the release-candidate surface). Resolve `latest`
@@ -37,9 +39,6 @@ RUN apk add --no-cache curl && \
 
 # Lambda's OS-only base image, the one for Go and other compiled languages.
 FROM public.ecr.aws/lambda/provided:al2023
-
-# DataDog logs source
-LABEL com.datadoghq.ad.logs='[{"source": "go"}]'
 
 # NOTE: pipeline v2 is build-once. ONE env-agnostic image is promoted from
 # release-candidate to production, so nothing environment-specific may be baked
