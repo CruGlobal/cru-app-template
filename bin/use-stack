@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Activate one stack for this Cru app.
 #
-#   bin/use-stack <ecs|cloudrun|lambda> <nodejs|ruby|python|go>
+#   bin/use-stack <ecs|cloudrun|lambda> <go|nodejs|ruby|python>
 #
 # Two axes, because a Cru app is two independent choices:
 #
@@ -25,13 +25,15 @@ usage() {
 Usage: bin/use-stack <type> <language>
 
   type      ecs | cloudrun | lambda
-  language  nodejs | ruby | python | go
+  language  go | nodejs | ruby | python
+            Go is the default. Pick nodejs (TypeScript) for a browser front
+            end, or for a library that only Node has.
 
 Examples:
-  bin/use-stack ecs nodejs
-  bin/use-stack lambda python
-  bin/use-stack cloudrun ruby
   bin/use-stack ecs go
+  bin/use-stack lambda go
+  bin/use-stack cloudrun nodejs
+  bin/use-stack lambda python
 EOF
 }
 
@@ -76,7 +78,7 @@ case "$lang" in
   python) eco="pip" ;;
   go)     eco="gomod" ;;
   *)
-    echo "Error: unknown language '$lang' (expected nodejs, ruby, python, or go)." >&2
+    echo "Error: unknown language '$lang' (expected go, nodejs, ruby, or python)." >&2
     usage
     exit 1
     ;;

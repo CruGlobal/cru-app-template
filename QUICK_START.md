@@ -9,8 +9,11 @@ covers day-to-day work; this file covers the platform around it.
 This template isn't tied to a runtime or a language. Pick both:
 
 ```bash
-bin/use-stack <ecs|cloudrun|lambda> <nodejs|ruby|python|go>
+bin/use-stack <ecs|cloudrun|lambda> <go|nodejs|ruby|python>
 ```
+
+For the language, Go is Cru's default for new apps. Pick `nodejs` (TypeScript)
+when the app has a browser front end, or needs a library that only Node has.
 
 That copies the chosen stack to the repo root — a minimal app with a
 `Dockerfile`, `build.sh`, `.tool-versions`, and a dependency manifest — writes

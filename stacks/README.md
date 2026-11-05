@@ -6,7 +6,7 @@ deletes the rest. Two axes:
 | Axis         | Values                           |
 | ------------ | -------------------------------- |
 | **type**     | `ecs`, `cloudrun`, `lambda`      |
-| **language** | `nodejs`, `ruby`, `python`, `go` |
+| **language** | `go`, `nodejs`, `ruby`, `python` |
 
 ## Why there is no `stacks/ecs/` or `stacks/cloudrun/`
 
