@@ -7,6 +7,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
@@ -18,6 +19,13 @@ import (
 // absent locally and in CI, which is normal: then nothing is reported.
 func setupErrorReporting() {
 	token, endpoint := os.Getenv("ROLLBAR_ACCESS_TOKEN"), os.Getenv("ROLLBAR_ENDPOINT")
+	// The Terraform module sets ROLLBAR_ENDPOINT on the function, but the token
+	// only arrives through the secrets wrapper. An endpoint with no token means
+	// the wrapper didn't run, or found no token, so say so loudly.
+	if endpoint != "" && token == "" {
+		slog.Error("ROLLBAR_ENDPOINT is set but ROLLBAR_ACCESS_TOKEN is not; " +
+			"the function may be running without its secrets")
+	}
 	if token == "" || endpoint == "" {
 		rollbar.SetEnabled(false)
 		return
@@ -69,7 +77,9 @@ func flushErrors(limit time.Duration) {
 Then, in `cmd/handler/main.go`:
 
 - call `setupErrorReporting()` before `lambda.Start`. The secrets wrapper has
-  already put `ROLLBAR_ACCESS_TOKEN` in the environment by then;
+  already put `ROLLBAR_ACCESS_TOKEN` in the environment by then. If it hasn't,
+  the function logs an error at start, because then it has none of its
+  secrets;
 - start `reportErrors` in place of `handle`:
   `lambda.Start(ddlambda.WrapFunction(reportErrors, nil))`. Keep the Datadog
   wrapper on the outside, so its trace records the error too.

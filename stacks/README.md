@@ -60,7 +60,11 @@ The wrapper reads the app's SSM parameters into the environment, the same ones
 the Node stack gets, then runs the base image's own entry point. That runs
 `/var/runtime/bootstrap`, which runs the Go binary at `/var/task/bootstrap`. If
 the wrapper can't read the parameters, it exits and the function fails to
-start, as in the Node stack.
+start, as in the Node stack. If the image is changed so the wrapper never runs,
+the function starts without its secrets; the errors example
+(`stacks/docs/errors-lambda-go.md`) logs an error at start when
+`ROLLBAR_ENDPOINT` is set but `ROLLBAR_ACCESS_TOKEN` is not, which is how that
+shows up.
 
 `CMD` matters only on your machine. The base image's entry point passes it on as
 `_HANDLER`, which the Go binary ignores, and the `aws/lambda/app` Terraform
