@@ -28,7 +28,7 @@ already builds and works:
 | **nodejs**   | TypeScript on Node (Lambda bundles with esbuild)         |
 | **ruby**     | a minimal Rack app (one command upgrades it to full Rails — see `stacks/server/ruby/config.ru`), or a Ruby handler on Lambda |
 | **python**   | Flask, or a Python handler on Lambda                     |
-| **go**       | a plain `net/http` server (ECS and Cloud Run only: there is no Go stack for Lambda) |
+| **go**       | a plain `net/http` server, or a Go handler on Lambda     |
 
 **Your first steps on a new app:**
 
@@ -100,9 +100,10 @@ Two rules, both load-bearing:
   which error reports send as their code version. They come last so a new build
   invalidates no earlier layer, and they are the **only** build values baked in.
 
-On **Lambda**, also leave Cru's wiring in place: the **secrets-lambda-extension**
-(set as `AWS_LAMBDA_EXEC_WRAPPER`, which injects secrets at runtime) and the
-**DataDog lambda-extension** plus DataDog instrumentation.
+On **Lambda**, also leave Cru's wiring in place: the **secrets-lambda-extension**,
+which injects secrets at runtime (set as `AWS_LAMBDA_EXEC_WRAPPER`, or in a Go
+function started by the image's `ENTRYPOINT`), and the **DataDog
+lambda-extension** plus DataDog instrumentation.
 
 `build.sh` must always forward `$DOCKER_ARGS` — that's how CI passes the registry
 tags, `--push`, and `--build-arg VERSION`.

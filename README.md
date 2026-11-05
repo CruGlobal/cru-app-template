@@ -17,7 +17,7 @@ bin/use-stack <ecs|cloudrun|lambda> <nodejs|ruby|python|go>
 | -------------- | -------------------- | --------------------------- | -------------- | ----------------- |
 | **`ecs`**      | TypeScript on Node   | Rack (upgradable to Rails)  | Flask          | `net/http` server |
 | **`cloudrun`** | TypeScript on Node   | Rack (upgradable to Rails)  | Flask          | `net/http` server |
-| **`lambda`**   | TypeScript handler   | Ruby handler                | Python handler | n/a               |
+| **`lambda`**   | TypeScript handler   | Ruby handler                | Python handler | Go handler        |
 
 - **type** — where it runs. `ecs` and `cloudrun` give you a web server that
   listens on `$PORT`; `lambda` gives you a handler invoked by an event.

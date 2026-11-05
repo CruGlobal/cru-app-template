@@ -1,0 +1,32 @@
+# golangci-lint settings. CI runs `golangci-lint run` as part of the
+# lint-and-build check, at the version pinned in .tool-versions. On top of the
+# default linters (errcheck, govet, ineffassign, staticcheck, unused), these
+# catch a few more real bugs without arguing about style.
+version: "2"
+
+linters:
+  enable:
+    - misspell # common misspellings in comments and strings
+    - noctx # HTTP requests and SQL queries made without a context
+    - thelper # test helpers that forget t.Helper()
+    - usetesting # os.Setenv and friends where the testing package has a safer one
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+
+formatters:
+  enable:
+    - gofmt
+    - gofumpt # a stricter gofmt
+    - goimports # gofmt plus grouped, pruned imports
+  settings:
+    gofmt:
+      rewrite-rules:
+        - pattern: interface{}
+          replacement: any
+  exclusions:
+    generated: lax

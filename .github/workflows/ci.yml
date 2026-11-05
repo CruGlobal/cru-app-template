@@ -39,7 +39,9 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: stacks/server/go/.tool-versions
-          cache-dependency-path: stacks/server/go/go.sum
+          cache-dependency-path: |
+            stacks/server/go/go.sum
+            stacks/lambda/go/go.sum
 
       - name: Install check tooling
         run: pip install --quiet pyyaml
@@ -85,18 +87,33 @@ jobs:
             echo "::endgroup::"
           done
 
-      - name: Read the Go stack's golangci-lint version
+      - name: Read the Go stacks' golangci-lint versions
         id: lintver
-        run: echo "version=v$(awk '$1=="golangci-lint"{print $2}' stacks/server/go/.tool-versions)" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "server=v$(awk '$1=="golangci-lint"{print $2}' stacks/server/go/.tool-versions)" >> "$GITHUB_OUTPUT"
+          echo "lambda=v$(awk '$1=="golangci-lint"{print $2}' stacks/lambda/go/.tool-versions)" >> "$GITHUB_OUTPUT"
 
-      - name: Go stack lint
+      - name: Go server stack lint
         uses: golangci/golangci-lint-action@v9
         with:
-          version: ${{ steps.lintver.outputs.version }}
+          version: ${{ steps.lintver.outputs.server }}
           working-directory: stacks/server/go
 
-      - name: Go stack build & test
+      - name: Go server stack build & test
         working-directory: stacks/server/go
+        run: |
+          go mod tidy -diff
+          go build ./...
+          go test -race ./...
+
+      - name: Go Lambda stack lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: ${{ steps.lintver.outputs.lambda }}
+          working-directory: stacks/lambda/go
+
+      - name: Go Lambda stack build & test
+        working-directory: stacks/lambda/go
         run: |
           go mod tidy -diff
           go build ./...
@@ -112,19 +129,6 @@ jobs:
               work="$RUNNER_TEMP/$type-$lang"
               rm -rf "$work"; mkdir -p "$work"
               git archive HEAD | tar -x -C "$work"
-
-              # There is no Go stack for Lambda: the script must refuse it and
-              # leave the repo untouched.
-              if [ "$type" = lambda ] && [ "$lang" = go ]; then
-                if (cd "$work" && bin/use-stack "$type" "$lang") > "$work.log" 2>&1; then
-                  echo "::error::$type/$lang: bin/use-stack should have refused this combo"; fail=1
-                elif [ ! -d "$work/stacks" ] || [ -e "$work/Dockerfile" ]; then
-                  echo "::error::$type/$lang: the refusal changed the repo"; fail=1
-                else
-                  echo "✓ $type/$lang refused"
-                fi
-                continue
-              fi
 
               if ! (cd "$work" && bin/use-stack "$type" "$lang") > "$work.log" 2>&1; then
                 echo "::error::$type/$lang — bin/use-stack failed"
@@ -169,9 +173,9 @@ jobs:
                 echo "::error::$type/$lang — generated YAML does not parse"; fail=1
               fi
               # Activation rewrites server code (the IAP gate, the Go module
-              # path), so prove each activated server app builds and passes
-              # its own tests.
-              if [ "$type" != lambda ]; then
+              # path), so prove each activated server app, and the Go Lambda
+              # app, builds and passes its own tests.
+              if [ "$type" != lambda ] || [ "$lang" = go ]; then
                 case "$lang" in
                   nodejs) check='npm ci && npm run build && npm test' ;;
                   python) check='pip install --quiet -r requirements.txt pytest && python -m pytest -q' ;;

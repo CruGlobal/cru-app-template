@@ -25,7 +25,7 @@ usage() {
 Usage: bin/use-stack <type> <language>
 
   type      ecs | cloudrun | lambda
-  language  nodejs | ruby | python | go   (go: ecs and cloudrun only)
+  language  nodejs | ruby | python | go
 
 Examples:
   bin/use-stack ecs nodejs
@@ -81,15 +81,6 @@ case "$lang" in
     exit 1
     ;;
 esac
-
-# There is no Go stack for Lambda. A Go function runs on Lambda's OS-only
-# runtime, which ignores AWS_LAMBDA_EXEC_WRAPPER, and that wrapper is how Cru's
-# secrets-lambda-extension injects secrets. See stacks/README.md.
-if [ "$family" = "lambda" ] && [ "$lang" = "go" ]; then
-  echo "Error: there is no Go stack for lambda. Use ecs or cloudrun for a Go app," >&2
-  echo "       or nodejs, ruby or python for a Lambda function." >&2
-  exit 1
-fi
 
 # Go names its module after the repository, the way `go mod init` would in a
 # fresh clone. The origin remote gives the real path. A copy with no remote, or
@@ -236,10 +227,13 @@ if [ "$family" = "server" ]; then
   fi
 fi
 
-# `go build ./cmd/server` leaves a binary named server at the root. Ignore it
-# in Go apps only: in another language, server/ may well be source.
+# `go build ./cmd/server` leaves a binary named server at the root, and
+# `go build ./cmd/handler` one named handler. Ignore it in Go apps only: in
+# another language, server/ may well be source.
 if [ "$lang" = "go" ]; then
-  printf '\n# The binary `go build ./cmd/server` writes\n/server\n' >> .gitignore
+  go_bin="server"
+  [ "$family" = "lambda" ] && go_bin="handler"
+  printf '\n# The binary `go build ./cmd/%s` writes\n/%s\n' "$go_bin" "$go_bin" >> .gitignore
 fi
 
 # The template repository guards its own nightly run (it has no infrastructure).
@@ -478,6 +472,7 @@ else
     nodejs) install_cmd='npm ci'; run_cmd='npm run build, then call the exported handler'; entry='src/index.ts' ;;
     python) install_cmd='pip install -r requirements.txt'; run_cmd='python -c "import handler; print(handler.handler({}, None))"'; entry='handler.py' ;;
     ruby)   install_cmd='bundle install'; run_cmd="ruby -r./handler -e 'p handler(event: {}, context: nil)'"; entry='handler.rb' ;;
+    go)     install_cmd='go mod download'; run_cmd='go test ./...'; entry='cmd/handler/main.go' ;;
   esac
   shape_line="It is a **handler invoked by an event** (API Gateway, SQS, an EventBridge schedule, …), not a web server — there is no \`\$PORT\` to bind and no health URL to curl. It returns \`{ statusCode: 200, body: '{\"status\":\"ok\"}' }\`. Keep the handler's signature and a fast, successful return — that's what Lambda invokes and deploys are judged by."
 fi
@@ -521,6 +516,31 @@ Before you push, run `golangci-lint run` and `go test -race ./...`. CI runs both
 at the versions pinned in `.tool-versions`. Keep new packages under `internal/`
 and new programs under `cmd/<name>/`.
 EOF
+fi
+
+# A Go function runs on Lambda's OS-only runtime, which has no exec wrapper, so
+# its image starts the secrets wrapper itself. Say so where people look, with
+# the way to call the image locally.
+if [ "$family" = "lambda" ] && [ "$lang" = "go" ]; then
+  cat > "$blocks/lambda_go" <<'EOF'
+
+The image runs `cmd/handler` as `bootstrap` on Lambda's OS-only runtime. That
+runtime has no exec wrapper, so the image's `ENTRYPOINT` starts the secrets
+wrapper itself: it puts the app's secrets into the environment, then starts the
+function. Keep that line, or the function starts without its secrets.
+
+To call the built image on your machine, skip the secrets wrapper and the
+Datadog extension, which both need the real AWS environment:
+
+```sh
+DOCKER_ARGS="--load -t my-function" ./build.sh
+docker run --rm -p 9000:8080 --entrypoint /lambda-entrypoint.sh \
+  --tmpfs /opt/extensions my-function bootstrap
+curl -XPOST localhost:9000/2015-03-31/functions/function/invocations -d '{}'
+```
+EOF
+  cat "$blocks/lambda_go" >> "$blocks/readme"
+  cat "$blocks/lambda_go" >> "$blocks/agents"
 fi
 
 cat > "$blocks/quickstart" <<EOF
