@@ -27,6 +27,11 @@ on:
   schedule:
     - cron: '0 5 * * *'
 
+# No job gets the repo's default GITHUB_TOKEN. The build job grants itself what
+# it needs below, and the deploy job dispatches with CRU_DEPLOY_GITHUB_TOKEN, so
+# neither one uses the default token.
+permissions: {}
+
 jobs:
   build:
     name: Build candidate
