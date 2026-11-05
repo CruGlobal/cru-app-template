@@ -21,6 +21,9 @@ COPY . .
 
 # The app listens on $PORT (default 8080); gunicorn binds there and serves the
 # `app` object in app/main.py. The platform routes traffic to that port.
+# Cloud Run and ECS set PORT=8080 themselves. Setting it here too makes a
+# plain `docker run` match them.
+ENV PORT=8080
 EXPOSE 8080
 CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8080} app.main:app"]
 

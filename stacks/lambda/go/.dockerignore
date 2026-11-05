@@ -1,0 +1,4 @@
+# Keeps the git history and local env files out of the build context. Only
+# the bootstrap binary reaches the image.
+.git
+.env*

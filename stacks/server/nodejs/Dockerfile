@@ -26,6 +26,9 @@ ENV NODE_ENV=production
 # the secrets injection supply them per environment.
 
 # The app listens on $PORT (default 8080); the platform routes traffic there.
+# Cloud Run and ECS set PORT=8080 themselves. Setting it here too makes a
+# plain `docker run` match them.
+ENV PORT=8080
 EXPOSE 8080
 CMD ["node", "dist/index.js"]
 

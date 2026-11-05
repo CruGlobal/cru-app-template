@@ -33,6 +33,9 @@ ENV RACK_ENV=production
 
 # The app listens on $PORT (default 8080); puma binds there and serves
 # config.ru. The platform routes traffic to that port.
+# Cloud Run and ECS set PORT=8080 themselves. Setting it here too makes a
+# plain `docker run` match them.
+ENV PORT=8080
 EXPOSE 8080
 CMD ["sh", "-c", "bundle exec puma -p ${PORT:-8080}"]
 

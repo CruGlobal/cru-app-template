@@ -6,7 +6,12 @@ deletes the rest. Two axes:
 | Axis         | Values                           |
 | ------------ | -------------------------------- |
 | **type**     | `ecs`, `cloudrun`, `lambda`      |
-| **language** | `nodejs`, `ruby`, `python`, `go` |
+| **language** | `go`, `nodejs`, `ruby`, `python` |
+
+Lambda has two of the four: `go` and `nodejs`. Ruby starts too slowly for a
+function that cold-starts on demand, and Python is not offered on Lambda for
+now. `bin/use-stack lambda ruby` and `lambda python` refuse and suggest `go` or
+`nodejs`. Both languages stay on ECS and Cloud Run.
 
 ## Why there is no `stacks/ecs/` or `stacks/cloudrun/`
 
@@ -21,7 +26,7 @@ There are two *shapes* of app here, not three:
 - **A handler** invoked by an event, with no port and no health URL. That's
   **Lambda**: `stacks/lambda/<language>/`. It needs its own scaffold because
   the base image, the entry point, and Cru's Lambda wiring (the
-  secrets-lambda-extension exec wrapper, the DataDog lambda-extension) are all
+  secrets-lambda-extension wrapper, the DataDog lambda-extension) are all
   different.
 
 The three predecessor templates (`cru-app-ecs-template`,
@@ -38,14 +43,36 @@ Registry, the Lambda-specific `--provenance=false`, and so on). Everything
 from the app's `CruApplicationInfo` record, which is why those workflows are
 type-agnostic and this repo ships one pipeline for all three types.
 
-## Why there is no `stacks/lambda/go/`
+## How the Go Lambda gets its secrets
 
-Go is a server stack only, for `ecs` and `cloudrun`. A Go function runs on
-Lambda's OS-only runtime (the `provided` family), and AWS does not run
-`AWS_LAMBDA_EXEC_WRAPPER` scripts there. That wrapper is how Cru's
-secrets-lambda-extension puts secrets into a function's environment, so a Go
-Lambda would start without them. `bin/use-stack lambda go` refuses with a clear
-message rather than scaffold something that can't read its secrets.
+The Node Lambda stack runs on a managed runtime. Its image sets
+`AWS_LAMBDA_EXEC_WRAPPER` to the secrets-lambda-extension's `secrets-wrapper`,
+and the runtime starts it before the function. A Go function
+runs on Lambda's OS-only runtime (`provided.al2023`), which ignores that
+variable. So `stacks/lambda/go/` starts the wrapper from the image instead:
+
+```dockerfile
+ENTRYPOINT ["/opt/secrets-lambda-extension/secrets-wrapper", "/lambda-entrypoint.sh"]
+CMD ["bootstrap"]
+```
+
+The wrapper reads the app's SSM parameters into the environment, the same ones
+the Node stack gets, then runs the base image's own entry point. That runs
+`/var/runtime/bootstrap`, which runs the Go binary at `/var/task/bootstrap`. If
+the wrapper can't read the parameters, it exits and the function fails to
+start, as in the Node stack. If the image is changed so the wrapper never runs,
+the function starts without its secrets; the errors example
+(`stacks/docs/errors-lambda-go.md`) logs an error at start when
+`ROLLBAR_ENDPOINT` is set but `ROLLBAR_ACCESS_TOKEN` is not, which is how that
+shows up.
+
+`CMD` matters only on your machine. The base image's entry point passes it on as
+`_HANDLER`, which the Go binary ignores, and the `aws/lambda/app` Terraform
+module sets its own command on the function anyway.
+
+Under the Runtime Interface Emulator, the Datadog extension never finishes an
+invocation, so a local run hides `/opt/extensions` (the README of an activated
+app shows the commands).
 
 ## What every stack contains
 
@@ -60,8 +87,9 @@ message rather than scaffold something that can't read its secrets.
 - `.tool-versions` — the pinned language version (asdf / mise).
 - A dependency manifest, and a minimal app that already builds and works.
 
-The Go stack also ships `.golangci.yml` and pins `golangci-lint` in
-`.tool-versions`, because its CI lints. Its `go.mod` names the module
+The Go stacks also ship `.golangci.yml` and pin `golangci-lint` in
+`.tool-versions`, because their CI lints. Keep the two Go stacks on the same Go
+and golangci-lint versions. Their `go.mod` names the module
 `__CRU_GO_MODULE__`, which `bin/use-stack` replaces with the repository's path
 (`github.com/<owner>/<repo>`, from the `origin` remote or else the directory
 name).

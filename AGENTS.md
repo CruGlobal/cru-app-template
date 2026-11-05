@@ -25,21 +25,24 @@ already builds and works:
 
 | language     | what it gives you                                        |
 | ------------ | -------------------------------------------------------- |
+| **go**       | a plain `net/http` server, or a Go handler on Lambda     |
 | **nodejs**   | TypeScript on Node (Lambda bundles with esbuild)         |
-| **ruby**     | a minimal Rack app (one command upgrades it to full Rails — see `stacks/server/ruby/config.ru`), or a Ruby handler on Lambda |
-| **python**   | Flask, or a Python handler on Lambda                     |
-| **go**       | a plain `net/http` server (ECS and Cloud Run only: there is no Go stack for Lambda) |
+| **ruby**     | a minimal Rack app (one command upgrades it to full Rails: see `stacks/server/ruby/config.ru`); ECS and Cloud Run only |
+| **python**   | Flask; ECS and Cloud Run only                            |
 
 **Your first steps on a new app:**
 
 1. Ask the user **where it should run** and **what language**. If they don't
    know:
-   - **type** — a request/response web app or API → **`ecs`** (Cru's default and
+   - **type**: a request/response web app or API → **`ecs`** (Cru's default and
      best-supported surface). Event-driven, scheduled, or bursty-and-idle work
-     → **`lambda`**. Choose **`cloudrun`** when the app belongs next to other
-     GCP resources.
-   - **language** — recommend **`nodejs`**; it's the most common here.
-2. Activate it: `bin/use-stack <ecs|cloudrun|lambda> <nodejs|ruby|python|go>`
+     → **`lambda`**, in `go` or `nodejs`. Choose **`cloudrun`** when the app
+     belongs next to other GCP resources.
+   - **language**: recommend **`go`**, Cru's default for new apps.
+     Recommend **`nodejs`** (TypeScript) instead when the app has a browser
+     front end, or needs a library that only Node has. Go has no feature-flag
+     client yet (see [Feature flags](#feature-flags)).
+2. Activate it: `bin/use-stack <ecs|cloudrun|lambda> <go|nodejs|ruby|python>`
    That copies the stack to the repo root, writes the type into
    `.github/workflows/pipeline-v2.yml`, generates `.github/dependabot.yml` and
    `.github/workflows/ci.yml`, fills in the docs, and removes everything it no
@@ -72,7 +75,7 @@ activated stack and its run commands.
 │       ├── ci.yml                           # PR check: lint-and-build
 │       ├── conventional-commits.yml         # PR check: Validate PR Title
 │       └── dependabot-auto-merge.yml        # auto-merges safe dependency PRs
-└── <your app files>   # src/ (node), app/ or handler.py (python), config.ru or handler.rb (ruby), cmd/ and internal/ (go)
+└── <your app files>   # src/ (node), app/ (python), config.ru (ruby), cmd/ and internal/ (go)
 ```
 
 ## The Dockerfile
@@ -100,9 +103,10 @@ Two rules, both load-bearing:
   which error reports send as their code version. They come last so a new build
   invalidates no earlier layer, and they are the **only** build values baked in.
 
-On **Lambda**, also leave Cru's wiring in place: the **secrets-lambda-extension**
-(set as `AWS_LAMBDA_EXEC_WRAPPER`, which injects secrets at runtime) and the
-**DataDog lambda-extension** plus DataDog instrumentation.
+On **Lambda**, also leave Cru's wiring in place: the **secrets-lambda-extension**,
+which injects secrets at runtime (set as `AWS_LAMBDA_EXEC_WRAPPER`, or in a Go
+function started by the image's `ENTRYPOINT`), and the **DataDog
+lambda-extension** plus DataDog instrumentation.
 
 `build.sh` must always forward `$DOCKER_ARGS` — that's how CI passes the registry
 tags, `--push`, and `--build-arg VERSION`.

@@ -10,19 +10,21 @@ This repo starts from [`cru-app-template`](https://github.com/CruGlobal/cru-app-
 and isn't tied to a stack yet. A stack is two choices:
 
 ```bash
-bin/use-stack <ecs|cloudrun|lambda> <nodejs|ruby|python|go>
+bin/use-stack <ecs|cloudrun|lambda> <go|nodejs|ruby|python>
 ```
 
-|                | `nodejs`             | `ruby`                      | `python`       | `go`              |
-| -------------- | -------------------- | --------------------------- | -------------- | ----------------- |
-| **`ecs`**      | TypeScript on Node   | Rack (upgradable to Rails)  | Flask          | `net/http` server |
-| **`cloudrun`** | TypeScript on Node   | Rack (upgradable to Rails)  | Flask          | `net/http` server |
-| **`lambda`**   | TypeScript handler   | Ruby handler                | Python handler | n/a               |
+|                | `go`              | `nodejs`             | `ruby`                      | `python`       |
+| -------------- | ----------------- | -------------------- | --------------------------- | -------------- |
+| **`ecs`**      | `net/http` server | TypeScript on Node   | Rack (upgradable to Rails)  | Flask          |
+| **`cloudrun`** | `net/http` server | TypeScript on Node   | Rack (upgradable to Rails)  | Flask          |
+| **`lambda`**   | Go handler        | TypeScript handler   | n/a                         | n/a            |
 
 - **type** — where it runs. `ecs` and `cloudrun` give you a web server that
-  listens on `$PORT`; `lambda` gives you a handler invoked by an event.
+  listens on `$PORT`; `lambda` gives you a handler invoked by an event, in Go
+  or TypeScript.
 - **language** — what it's written in. If you have no preference, pick
-  **`nodejs`**: it's the most common here and the easiest to grow.
+  **`go`**, Cru's default for new apps. Pick **`nodejs`** (TypeScript) when the
+  app has a browser front end, or needs a library that only Node has.
 
 Run it once, review, and commit. It copies your stack to the repo root, wires up
 CI and dependency updates, and removes everything it no longer needs — including

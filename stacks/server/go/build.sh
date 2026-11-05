@@ -6,5 +6,5 @@
 # .tool-versions so the image matches your toolchain.
 
 docker buildx build $DOCKER_ARGS \
-  --build-arg GO_VERSION=$(awk '$1 == "golang" { print $2 }' .tool-versions) \
+  --build-arg GO_VERSION="$(awk '$1 == "golang" { print $2 }' .tool-versions)" \
   .
