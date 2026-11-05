@@ -27,8 +27,8 @@ already builds and works:
 | ------------ | -------------------------------------------------------- |
 | **go**       | a plain `net/http` server, or a Go handler on Lambda     |
 | **nodejs**   | TypeScript on Node (Lambda bundles with esbuild)         |
-| **ruby**     | a minimal Rack app (one command upgrades it to full Rails — see `stacks/server/ruby/config.ru`), or a Ruby handler on Lambda |
-| **python**   | Flask, or a Python handler on Lambda                     |
+| **ruby**     | a minimal Rack app (one command upgrades it to full Rails: see `stacks/server/ruby/config.ru`); ECS and Cloud Run only |
+| **python**   | Flask; ECS and Cloud Run only                            |
 
 **Your first steps on a new app:**
 
@@ -36,8 +36,8 @@ already builds and works:
    know:
    - **type**: a request/response web app or API → **`ecs`** (Cru's default and
      best-supported surface). Event-driven, scheduled, or bursty-and-idle work
-     → **`lambda`**. Choose **`cloudrun`** when the app belongs next to other
-     GCP resources.
+     → **`lambda`**, in `go` or `nodejs`. Choose **`cloudrun`** when the app
+     belongs next to other GCP resources.
    - **language**: recommend **`go`**, Cru's default for new apps.
      Recommend **`nodejs`** (TypeScript) instead when the app has a browser
      front end, or needs a library that only Node has. Go has no feature-flag
@@ -75,7 +75,7 @@ activated stack and its run commands.
 │       ├── ci.yml                           # PR check: lint-and-build
 │       ├── conventional-commits.yml         # PR check: Validate PR Title
 │       └── dependabot-auto-merge.yml        # auto-merges safe dependency PRs
-└── <your app files>   # src/ (node), app/ or handler.py (python), config.ru or handler.rb (ruby), cmd/ and internal/ (go)
+└── <your app files>   # src/ (node), app/ (python), config.ru (ruby), cmd/ and internal/ (go)
 ```
 
 ## The Dockerfile

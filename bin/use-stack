@@ -25,7 +25,7 @@ usage() {
 Usage: bin/use-stack <type> <language>
 
   type      ecs | cloudrun | lambda
-  language  go | nodejs | ruby | python
+  language  go | nodejs | ruby | python   (lambda: go or nodejs)
             Go is the default. Pick nodejs (TypeScript) for a browser front
             end, or for a library that only Node has.
 
@@ -33,7 +33,7 @@ Examples:
   bin/use-stack ecs go
   bin/use-stack lambda go
   bin/use-stack cloudrun nodejs
-  bin/use-stack lambda python
+  bin/use-stack ecs python
 EOF
 }
 
@@ -83,6 +83,13 @@ case "$lang" in
     exit 1
     ;;
 esac
+
+# Lambda functions are Go, or TypeScript on Node. Ruby starts too slowly for
+# Lambda, and Python is not offered there for now. See stacks/README.md.
+if [ "$family" = "lambda" ] && { [ "$lang" = "ruby" ] || [ "$lang" = "python" ]; }; then
+  echo "Error: there is no $lang stack for lambda. Pick go (recommended) or nodejs." >&2
+  exit 1
+fi
 
 # Go names its module after the repository, the way `go mod init` would in a
 # fresh clone. The origin remote gives the real path. A copy with no remote, or
@@ -472,8 +479,6 @@ shows both.' ;;
 else
   case "$lang" in
     nodejs) install_cmd='npm ci'; run_cmd='npm run build, then call the exported handler'; entry='src/index.ts' ;;
-    python) install_cmd='pip install -r requirements.txt'; run_cmd='python -c "import handler; print(handler.handler({}, None))"'; entry='handler.py' ;;
-    ruby)   install_cmd='bundle install'; run_cmd="ruby -r./handler -e 'p handler(event: {}, context: nil)'"; entry='handler.rb' ;;
     go)     install_cmd='go mod download'; run_cmd='go test ./...'; entry='cmd/handler/main.go' ;;
   esac
   shape_line="It is a **handler invoked by an event** (API Gateway, SQS, an EventBridge schedule, …), not a web server — there is no \`\$PORT\` to bind and no health URL to curl. It returns \`{ statusCode: 200, body: '{\"status\":\"ok\"}' }\`. Keep the handler's signature and a fast, successful return — that's what Lambda invokes and deploys are judged by."

@@ -64,7 +64,7 @@ jobs:
         run: find stacks -name '*.rb' -o -name '*.ru' | xargs -r -n1 ruby -c
 
       - name: Python syntax
-        run: python -m compileall -q stacks/server/python stacks/lambda/python
+        run: python -m compileall -q stacks/server/python
 
       - name: Python server stack test
         working-directory: stacks/server/python
@@ -129,6 +129,19 @@ jobs:
               work="$RUNNER_TEMP/$type-$lang"
               rm -rf "$work"; mkdir -p "$work"
               git archive HEAD | tar -x -C "$work"
+
+              # Lambda is Go or Node only: the script must refuse Ruby and
+              # Python there and leave the repo untouched.
+              if [ "$type" = lambda ] && { [ "$lang" = ruby ] || [ "$lang" = python ]; }; then
+                if (cd "$work" && bin/use-stack "$type" "$lang") > "$work.log" 2>&1; then
+                  echo "::error::$type/$lang: bin/use-stack should have refused this combo"; fail=1
+                elif [ ! -d "$work/stacks" ] || [ -e "$work/Dockerfile" ]; then
+                  echo "::error::$type/$lang: the refusal changed the repo"; fail=1
+                else
+                  echo "✓ $type/$lang refused"
+                fi
+                continue
+              fi
 
               if ! (cd "$work" && bin/use-stack "$type" "$lang") > "$work.log" 2>&1; then
                 echo "::error::$type/$lang — bin/use-stack failed"

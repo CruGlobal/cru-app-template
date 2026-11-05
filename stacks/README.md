@@ -8,6 +8,11 @@ deletes the rest. Two axes:
 | **type**     | `ecs`, `cloudrun`, `lambda`      |
 | **language** | `go`, `nodejs`, `ruby`, `python` |
 
+Lambda has two of the four: `go` and `nodejs`. Ruby starts too slowly for a
+function that cold-starts on demand, and Python is not offered on Lambda for
+now. `bin/use-stack lambda ruby` and `lambda python` refuse and suggest `go` or
+`nodejs`. Both languages stay on ECS and Cloud Run.
+
 ## Why there is no `stacks/ecs/` or `stacks/cloudrun/`
 
 There are two *shapes* of app here, not three:
@@ -40,9 +45,9 @@ type-agnostic and this repo ships one pipeline for all three types.
 
 ## How the Go Lambda gets its secrets
 
-The other Lambda stacks run on a managed runtime (Node, Python, Ruby). Their
-images set `AWS_LAMBDA_EXEC_WRAPPER` to the secrets-lambda-extension's
-`secrets-wrapper`, and the runtime starts it before the function. A Go function
+The Node Lambda stack runs on a managed runtime. Its image sets
+`AWS_LAMBDA_EXEC_WRAPPER` to the secrets-lambda-extension's `secrets-wrapper`,
+and the runtime starts it before the function. A Go function
 runs on Lambda's OS-only runtime (`provided.al2023`), which ignores that
 variable. So `stacks/lambda/go/` starts the wrapper from the image instead:
 
@@ -52,10 +57,10 @@ CMD ["bootstrap"]
 ```
 
 The wrapper reads the app's SSM parameters into the environment, the same ones
-the other stacks get, then runs the base image's own entry point. That runs
+the Node stack gets, then runs the base image's own entry point. That runs
 `/var/runtime/bootstrap`, which runs the Go binary at `/var/task/bootstrap`. If
 the wrapper can't read the parameters, it exits and the function fails to
-start, as in the other stacks.
+start, as in the Node stack.
 
 `CMD` matters only on your machine. The base image's entry point passes it on as
 `_HANDLER`, which the Go binary ignores, and the `aws/lambda/app` Terraform

@@ -14,6 +14,8 @@ bin/use-stack <ecs|cloudrun|lambda> <go|nodejs|ruby|python>
 
 For the language, Go is Cru's default for new apps. Pick `nodejs` (TypeScript)
 when the app has a browser front end, or needs a library that only Node has.
+A Lambda function is `go` or `nodejs`; `ruby` and `python` are for ECS and
+Cloud Run.
 
 That copies the chosen stack to the repo root — a minimal app with a
 `Dockerfile`, `build.sh`, `.tool-versions`, and a dependency manifest — writes
