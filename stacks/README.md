@@ -157,5 +157,5 @@ one for the chosen stack into the `CRU:FLAGS` block of AGENTS.md. Like the
 error-reporting examples they are docs, not code the stack runs. The server
 ones wait for the first fetch before serving; the Lambda ones refresh from the
 handler, because Lambda freezes the function between invocations and a
-background timer would not run. Each Go, Node and Python example was run
-against a local flag document before it went in: keep it that way.
+background timer would not run. Each example was run against a local flag
+document before it went in: keep it that way.

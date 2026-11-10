@@ -166,10 +166,10 @@ launching is a flag flip in production.
   | --- | --- | --- |
   | **nodejs** | `npm install @cruglobal/flags` | `flags.enabled("name")` — server side only |
   | **python** | `pip install cru-flags` | `flags.enabled("name")` |
-  | **ruby** | stock Flipper — `flipper` + `flipper-active_support_cache_store`, wired by the canonical initializer in the pipeline guide (copy it exactly; the `Failsafe` adapter and the Marshal-safe read wrapper are load-bearing) | `Flipper.enabled?(:name)` |
+  | **ruby** | `gem "cru-flags"` (in Rails it sets up Flipper for you) | `Flipper.enabled?(:name)` in Rails, `CruFlags.enabled?("name")` elsewhere |
   | **go** | `go get github.com/CruGlobal/cru-flags` | `cruflags.Enabled("name")` |
 
-  The Go, Node and Python clients (and the `cru-flags` gem) live together in
+  All four clients live together in
   [CruGlobal/cru-flags](https://github.com/CruGlobal/cru-flags) and pass the
   same conformance tests. If a language here has no client, tell the user
   rather than writing one into the app.
@@ -180,7 +180,7 @@ up the flag client in this stack: where to wait for the first fetch, and, on
 Lambda, how to refresh from the handler instead of a background timer.
 <!-- /CRU:FLAGS -->
 
-The full story — the CLI, the wire format, the Rails initializer — is the
+The full story — the CLI, the wire format, each language's setup — is the
 [pipeline guide's Feature flags section](https://github.com/CruGlobal/cru-deploy/blob/main/docs/pipeline-v2.md#feature-flags).
 An app's flags are visible on the dashboard at <https://deploys.cru.org>.
 
