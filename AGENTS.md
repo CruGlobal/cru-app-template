@@ -40,8 +40,7 @@ already builds and works:
      belongs next to other GCP resources.
    - **language**: recommend **`go`**, Cru's default for new apps.
      Recommend **`nodejs`** (TypeScript) instead when the app has a browser
-     front end, or needs a library that only Node has. Go has no feature-flag
-     client yet (see [Feature flags](#feature-flags)).
+     front end, or needs a library that only Node has.
 2. Activate it: `bin/use-stack <ecs|cloudrun|lambda> <go|nodejs|ruby|python>`
    That copies the stack to the repo root, writes the type into
    `.github/workflows/pipeline-v2.yml`, generates `.github/dependabot.yml` and
@@ -168,11 +167,18 @@ launching is a flag flip in production.
   | **nodejs** | `npm install @cruglobal/flags` | `flags.enabled("name")` — server side only |
   | **python** | `pip install cru-flags` | `flags.enabled("name")` |
   | **ruby** | stock Flipper — `flipper` + `flipper-active_support_cache_store`, wired by the canonical initializer in the pipeline guide (copy it exactly; the `Failsafe` adapter and the Marshal-safe read wrapper are load-bearing) | `Flipper.enabled?(:name)` |
-  | **go** | none yet | n/a |
+  | **go** | `go get github.com/CruGlobal/cru-flags` | `cruflags.Enabled("name")` |
 
-  A Go app has no official client yet. If it needs a flag, tell the user rather
-  than writing a client into the app: a client is shared work, and the pipeline
-  guide lists the rules any client has to follow.
+  The Go, Node and Python clients (and the `cru-flags` gem) live together in
+  [CruGlobal/cru-flags](https://github.com/CruGlobal/cru-flags) and pass the
+  same conformance tests. If a language here has no client, tell the user
+  rather than writing one into the app.
+
+<!-- CRU:FLAGS -->
+**No stack is activated yet.** After activation, this section shows how to set
+up the flag client in this stack: where to wait for the first fetch, and, on
+Lambda, how to refresh from the handler instead of a background timer.
+<!-- /CRU:FLAGS -->
 
 The full story — the CLI, the wire format, the Rails initializer — is the
 [pipeline guide's Feature flags section](https://github.com/CruGlobal/cru-deploy/blob/main/docs/pipeline-v2.md#feature-flags).
