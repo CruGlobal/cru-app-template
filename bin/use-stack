@@ -623,6 +623,10 @@ fi
 # differently.
 cp "stacks/docs/errors-$family-$lang.md" "$blocks/errors"
 
+# How to set up this stack's feature-flag client. One fragment per family and
+# language, because a Lambda function refreshes from its handler, not a timer.
+cp "stacks/docs/flags-$family-$lang.md" "$blocks/flags"
+
 # Only Cloud Run keeps the IAP gate (step 2b), so ECS and Lambda get these
 # blocks emptied.
 : > "$blocks/iap_readme"; : > "$blocks/iap_agents"; : > "$blocks/iap_quickstart"
@@ -699,6 +703,7 @@ fill_block README.md DATABASE "$blocks/db_readme"
 fill_block AGENTS.md DATABASE "$blocks/db_agents"
 fill_block QUICK_START.md DATABASE "$blocks/db_quickstart"
 fill_block AGENTS.md ERRORS "$blocks/errors"
+fill_block AGENTS.md FLAGS "$blocks/flags"
 fill_block README.md IAP "$blocks/iap_readme"
 fill_block AGENTS.md IAP "$blocks/iap_agents"
 fill_block QUICK_START.md IAP "$blocks/iap_quickstart"

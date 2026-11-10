@@ -148,3 +148,14 @@ of AGENTS.md. They are docs, not code the stack runs, because where an app hooks
 in its error reporting depends on the framework it grows into. Each example was
 run against a fake Rollbar endpoint before it went in: keep it that way when you
 change one, because a broken example here is copied into every new app.
+
+## Feature flag examples
+
+Every stack also has an example of setting up its feature-flag client, in
+`stacks/docs/flags-<server|lambda>-<language>.md`. `bin/use-stack` copies the
+one for the chosen stack into the `CRU:FLAGS` block of AGENTS.md. Like the
+error-reporting examples they are docs, not code the stack runs. The server
+ones wait for the first fetch before serving; the Lambda ones refresh from the
+handler, because Lambda freezes the function between invocations and a
+background timer would not run. Each example was run against a local flag
+document before it went in: keep it that way.
