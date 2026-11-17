@@ -91,14 +91,15 @@ and — if it's good — promoted byte-for-byte to production. There is **no
    `candidate-<yyyy-mm-dd>-<n>` to the shared registry, and dispatches a deploy
    to **release-candidate**. If `main` hasn't moved since the last build, the
    candidate is reused and the deploy no-ops.
-3. **Promote to production** — run the Promote Action in
-   [`cru-deploy`](https://github.com/CruGlobal/cru-deploy), or `cru deploy` from
-   the CLI. It deploys the exact digest that has been running on
-   release-candidate; nothing is rebuilt, and the release is tagged
-   `release-<yyyy-mm-dd>-<n>`.
-4. **Roll back** — run the Rollback Action in `cru-deploy` against an earlier
-   release. Because the artifact is immutable, a rollback restores the exact
-   bytes that were running before.
+3. **Promote to production** with `cru app promote -n <app>`. The Cru CLI
+   signs you in with Okta, and the deploy gate lets you promote only if you are
+   in the `developers` list of the app's Terraform. The promote runs in
+   [`cru-deploy`](https://github.com/CruGlobal/cru-deploy). It deploys the
+   exact digest that has been running on release-candidate; nothing is rebuilt,
+   and the release is tagged `release-<yyyy-mm-dd>-<n>`.
+4. **Roll back** with `cru app rollback -n <app>`, to the previous release or
+   one you name. The same sign-in and list apply. Because the artifact is
+   immutable, a rollback restores the exact bytes that were running before.
 
 All deployments happen in `cru-deploy`, never in this repo. **Builds fail until
 step 2's Terraform is applied** — that's expected, so don't chase it.
