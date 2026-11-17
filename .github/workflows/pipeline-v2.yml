@@ -75,10 +75,6 @@ jobs:
       - uses: CruGlobal/.github/actions/dispatch@v2
         with:
           gate-url: https://deploys.cru.org/gate
-          # The fallback while the fleet moves to the gate: used only when the
-          # job has no OIDC token or the gate can't be reached, never when the
-          # gate refuses.
-          github-token: ${{ secrets.CRU_DEPLOY_GITHUB_TOKEN }}
           workflow: deploy-candidate.yml
           inputs-json: >-
             {"project-name": "${{ needs.build.outputs.project-name }}",
