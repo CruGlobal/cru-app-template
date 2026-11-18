@@ -88,8 +88,10 @@ and — if it's good — promoted byte-for-byte to production. There is **no
    builds on a **nightly-if-changed cron at 05:00 UTC** (midnight EST / 1am
    EDT), or on demand via **workflow_dispatch**. Merging to `main` does *not*
    trigger a build. The build runs `build.sh`, pushes a candidate image tagged
-   `candidate-<yyyy-mm-dd>-<n>` to the shared registry, and dispatches a deploy
-   to **release-candidate**. If `main` hasn't moved since the last build, the
+   `candidate-<yyyy-mm-dd>-<n>` to the shared registry, and starts a deploy to
+   **release-candidate** through the deploy gate, with the run's GitHub OIDC
+   token. The deploy job has no org token, so if the gate refuses or can't be
+   reached, the deploy fails. If `main` hasn't moved since the last build, the
    candidate is reused and the deploy no-ops.
 3. **Promote to production** with `cru app promote -n <app>`. The Cru CLI
    signs you in with Okta, and the deploy gate lets you promote only if you are
@@ -97,9 +99,12 @@ and — if it's good — promoted byte-for-byte to production. There is **no
    [`cru-deploy`](https://github.com/CruGlobal/cru-deploy). It deploys the
    exact digest that has been running on release-candidate; nothing is rebuilt,
    and the release is tagged `release-<yyyy-mm-dd>-<n>`.
-4. **Roll back** with `cru app rollback -n <app>`, to the previous release or
-   one you name. The same sign-in and list apply. Because the artifact is
-   immutable, a rollback restores the exact bytes that were running before.
+4. **Roll back** with `cru app rollback -n <app> <release>`, naming the
+   release to go back to: its `release-*` tag or just its build number
+   (`cru app deploys -n <app> --env production` or this repo's GitHub
+   Releases page lists them). The same sign-in and list apply. Because the
+   artifact is immutable, a rollback restores the exact bytes that were running
+   before.
 
 All deployments happen in `cru-deploy`, never in this repo. **Builds fail until
 step 2's Terraform is applied** — that's expected, so don't chase it.
