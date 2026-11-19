@@ -129,11 +129,14 @@ anywhere, the reference is stale.
    (the stage surface). If `main` hasn't moved, the build reuses the existing
    candidate and the deploy no-ops — a quiet night is a true end-to-end no-op.
 4. **Promotion to production and rollbacks** use the Cru CLI:
-   `cru app promote -n <app>` and `cru app rollback -n <app>`. The CLI signs
-   you in with Okta and sends the request through the deploy gate, which allows
-   it only for the developers listed in the app's Terraform; the work then runs
-   in [`cru-deploy`](https://github.com/CruGlobal/cru-deploy), not in this
-   repo. Push access to this repo does not let you promote. Merging to `main`
+   `cru app promote -n <app>` and `cru app rollback -n <app> <release>`.
+   A rollback must name the release to go back to: its `release-*` tag or
+   just its build number (`cru app deploys -n <app> --env production` lists
+   them). The CLI signs you in with Okta and sends the request through the
+   deploy gate, which allows it only for the developers listed in the app's
+   Terraform; the work then runs in
+   [`cru-deploy`](https://github.com/CruGlobal/cru-deploy), not in this repo.
+   Push access to this repo does not let you promote. Merging to `main`
    does not deploy anything by itself. Because the artifact is immutable, a
    rollback restores the exact bytes that were running before.
 
